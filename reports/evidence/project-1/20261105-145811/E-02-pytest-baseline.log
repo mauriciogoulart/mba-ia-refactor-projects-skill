@@ -1,0 +1,15 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.2.0, pluggy-1.7.0
+rootdir: D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\code-smells-project
+configfile: pytest.ini
+testpaths: tests
+collected 23 items
+
+tests\test_api.py .......................                                [100%]
+
+============================= 23 passed in 4.16s ==============================
+
+real	0m5,736s
+user	0m0,015s
+sys	0m0,000s
+exit=0

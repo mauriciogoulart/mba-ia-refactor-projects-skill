@@ -1,0 +1,25 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.2.0, pluggy-1.7.0
+rootdir: D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\code-smells-project
+configfile: pytest.ini
+testpaths: tests
+collected 23 items
+
+tests\test_api.py ......................F                                [100%]
+
+================================== FAILURES ===================================
+____________________________ test_relatorio_vendas ____________________________
+
+api = <conftest.Cliente object at 0x0000018B7EB5F620>
+
+    def test_relatorio_vendas(api):
+        r = api.get("/relatorios/vendas")
+>       assert r.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401]>.status_code
+
+tests\test_api.py:242: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_api.py::test_relatorio_vendas - assert 401 == 200
+======================== 1 failed, 22 passed in 3.99s =========================
+exit=1

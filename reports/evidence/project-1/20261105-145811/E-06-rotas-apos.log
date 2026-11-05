@@ -1,0 +1,20 @@
+2026-11-05 15:21:32,981 WARNING app: SECRET_KEY não definida: usando chave efêmera (tokens expiram ao reiniciar)
+2026-11-05 15:21:33,380 INFO database.schema: Banco semeado com dados de desenvolvimento
+['GET'] /
+['POST'] /admin/reset-db
+['GET'] /health
+['POST'] /login
+['POST'] /pedidos
+['GET'] /pedidos
+['PUT'] /pedidos/<int:pedido_id>/status
+['GET'] /pedidos/usuario/<int:usuario_id>
+['GET'] /produtos
+['POST'] /produtos
+['GET'] /produtos/<int:produto_id>
+['PUT'] /produtos/<int:produto_id>
+['DELETE'] /produtos/<int:produto_id>
+['GET'] /produtos/busca
+['GET'] /relatorios/vendas
+['GET'] /usuarios
+['POST'] /usuarios
+['GET'] /usuarios/<int:usuario_id>

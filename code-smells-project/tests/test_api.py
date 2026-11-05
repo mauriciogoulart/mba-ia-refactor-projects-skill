@@ -238,7 +238,8 @@ def test_atualizar_status_pedido(api):
 # ---------- relatório ----------
 
 def test_relatorio_vendas(api):
-    r = api.get("/relatorios/vendas")
+    token = api.post("/login", {"email": "admin@loja.com", "senha": "admin123"}).json()["token"]
+    r = api.get("/relatorios/vendas", headers={"Authorization": "Bearer " + token})
     assert r.status_code == 200
     dados = r.json()["dados"]
     for chave in ("total_pedidos", "faturamento_bruto", "desconto_aplicavel",
