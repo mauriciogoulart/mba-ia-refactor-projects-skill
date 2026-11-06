@@ -1,0 +1,69 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.2.0, pluggy-1.7.0 -- D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe
+rootdir: C:\Users\maury\AppData\Local\Temp\claude\d178e73f9d1bead4\df7ac816-6ae9-4308-9ebe-946bfa218259\scratchpad\checkpoint-original\task-manager-api
+configfile: pytest.ini
+collecting ... collected 11 items
+
+tests/test_contratos.py::test_ct01_token_forjado_e_rejeitado FAILED      [  9%]
+tests/test_contratos.py::test_ct02_rotas_de_dados_exigem_token FAILED    [ 18%]
+tests/test_contratos.py::test_ct02_rotas_publicas_continuam_abertas PASSED [ 27%]
+tests/test_contratos.py::test_ct02_token_valido_libera_acesso PASSED     [ 36%]
+tests/test_contratos.py::test_ct03_alterar_e_excluir_usuario_exige_permissao FAILED [ 45%]
+tests/test_contratos.py::test_ct04_cadastro_anonimo_nao_define_role_privilegiado FAILED [ 54%]
+tests/test_contratos.py::test_ct05_password_ausente_nas_respostas FAILED [ 63%]
+tests/test_contratos.py::test_ct06_cors_somente_para_origens_configuradas FAILED [ 72%]
+tests/test_contratos.py::test_ct07_tipo_invalido_retorna_400 FAILED      [ 81%]
+tests/test_contratos.py::test_c06_validacoes_adicionais FAILED           [ 90%]
+tests/test_api.py::test_login_sucesso FAILED                             [100%]
+
+================================== FAILURES ===================================
+E   AssertionError: assert 200 == 401
+     +  where 200 = <Response [200]>.status_code
+     +    where <Response [200]> = get('/tasks', headers={'Authorization': 'Bearer fake-jwt-token-1'})
+     +      where get = <conftest.Cliente object at 0x000002A11AA84EC0>.get
+C:\Users\maury\AppData\Local\Temp\claude\d178e73f9d1bead4\df7ac816-6ae9-4308-9ebe-946bfa218259\scratchpad\checkpoint-original\task-manager-api\tests\test_contratos.py:37: AssertionError: assert 200 == 401
+E   AssertionError: ('GET', '/tasks')
+    assert 200 == 401
+     +  where 200 = <Response [200]>.status_code
+     +    where <Response [200]> = _req('GET', '/tasks', json=None)
+     +      where _req = <conftest.Cliente object at 0x000002A11AA84EC0>._req
+C:\Users\maury\AppData\Local\Temp\claude\d178e73f9d1bead4\df7ac816-6ae9-4308-9ebe-946bfa218259\scratchpad\checkpoint-original\task-manager-api\tests\test_contratos.py:56: AssertionError: ('GET', '/tasks')
+E   AssertionError: assert 200 == 401
+     +  where 200 = <Response [200]>.status_code
+     +    where <Response [200]> = put('/users/4', {'name': 'Invasor'})
+     +      where put = <conftest.Cliente object at 0x000002A11AA84EC0>.put
+C:\Users\maury\AppData\Local\Temp\claude\d178e73f9d1bead4\df7ac816-6ae9-4308-9ebe-946bfa218259\scratchpad\checkpoint-original\task-manager-api\tests\test_contratos.py:78: AssertionError: assert 200 == 401
+E   assert 201 == 403
+     +  where 201 = <Response [201]>.status_code
+C:\Users\maury\AppData\Local\Temp\claude\d178e73f9d1bead4\df7ac816-6ae9-4308-9ebe-946bfa218259\scratchpad\checkpoint-original\task-manager-api\tests\test_contratos.py:100: assert 201 == 403
+E   AssertionError: assert 'password' not in {'active': True, 'created_at': '2026-11-06 17:28:12.935206', 'email': 'hb41ceba6@teste.com', 'id': 8, ...}
+     +  where {'active': True, 'created_at': '2026-11-06 17:28:12.935206', 'email': 'hb41ceba6@teste.com', 'id': 8, ...} = json()
+     +    where json = <Response [201]>.json
+C:\Users\maury\AppData\Local\Temp\claude\d178e73f9d1bead4\df7ac816-6ae9-4308-9ebe-946bfa218259\scratchpad\checkpoint-original\task-manager-api\tests\test_contratos.py:119: AssertionError: assert 'password' not in {'active': True, 'created_at': '2026-11-06 17:28:12.935206', 'email': 'hb41ceba6@teste.com', 'id': 8, ...}
+E   AssertionError: assert 'Access-Control-Allow-Origin' not in {'Server': 'Werkzeug/3.1.9 Python/3.14.0', 'Date': 'Fri, 06 Nov 2026 17:28:12 GMT', 'Content-Type': 'application/json', 'Content-Length': '66', 'Access-Control-Allow-Origin': 'http://malicioso.local', 'Vary': 'Origin', 'Connection': 'close'}
+     +  where {'Server': 'Werkzeug/3.1.9 Python/3.14.0', 'Date': 'Fri, 06 Nov 2026 17:28:12 GMT', 'Content-Type': 'application/json', 'Content-Length': '66', 'Access-Control-Allow-Origin': 'http://malicioso.local', 'Vary': 'Origin', 'Connection': 'close'} = <Response [200]>.headers
+C:\Users\maury\AppData\Local\Temp\claude\d178e73f9d1bead4\df7ac816-6ae9-4308-9ebe-946bfa218259\scratchpad\checkpoint-original\task-manager-api\tests\test_contratos.py:138: AssertionError: assert 'Access-Control-Allow-Origin' not in {'Server': 'Werkzeug/3.1.9 Python/3.14.0', 'Date': 'Fri, 06 Nov 2026 17:28:12 GMT', 'Content-Type': 'application/json', 'Content-Length': '66', 'Access-Control-Allow-Origin': 'http://malicioso.local', 'Vary': 'Origin', 'Connection': 'close'}
+E   AssertionError: ('POST', '/tasks', {'title': 'Titulo valido', 'priority': '5'})
+    assert 500 == 400
+     +  where 500 = <Response [500]>.status_code
+C:\Users\maury\AppData\Local\Temp\claude\d178e73f9d1bead4\df7ac816-6ae9-4308-9ebe-946bfa218259\scratchpad\checkpoint-original\task-manager-api\tests\test_contratos.py:164: AssertionError: ('POST', '/tasks', {'title': 'Titulo valido', 'priority': '5'})
+E   AssertionError: assert 200 == 400
+     +  where 200 = <Response [200]>.status_code
+     +    where <Response [200]> = put('/users/9', {'name': ''})
+     +      where put = <conftest.Cliente object at 0x000002A11AADE490>.put
+C:\Users\maury\AppData\Local\Temp\claude\d178e73f9d1bead4\df7ac816-6ae9-4308-9ebe-946bfa218259\scratchpad\checkpoint-original\task-manager-api\tests\test_contratos.py:179: AssertionError: assert 200 == 400
+E   AssertionError: assert 'fake-jwt-token-1' != ('fake-jwt-token-' + '1')
+     +  where '1' = str(1)
+C:\Users\maury\AppData\Local\Temp\claude\d178e73f9d1bead4\df7ac816-6ae9-4308-9ebe-946bfa218259\scratchpad\checkpoint-original\task-manager-api\tests\test_api.py:54: AssertionError: assert 'fake-jwt-token-1' != ('fake-jwt-token-' + '1')
+=========================== short test summary info ===========================
+FAILED tests/test_contratos.py::test_ct01_token_forjado_e_rejeitado - Asserti...
+FAILED tests/test_contratos.py::test_ct02_rotas_de_dados_exigem_token - Asser...
+FAILED tests/test_contratos.py::test_ct03_alterar_e_excluir_usuario_exige_permissao
+FAILED tests/test_contratos.py::test_ct04_cadastro_anonimo_nao_define_role_privilegiado
+FAILED tests/test_contratos.py::test_ct05_password_ausente_nas_respostas - As...
+FAILED tests/test_contratos.py::test_ct06_cors_somente_para_origens_configuradas
+FAILED tests/test_contratos.py::test_ct07_tipo_invalido_retorna_400 - Asserti...
+FAILED tests/test_contratos.py::test_c06_validacoes_adicionais - AssertionErr...
+FAILED tests/test_api.py::test_login_sucesso - AssertionError: assert 'fake-j...
+========================= 9 failed, 2 passed in 5.22s =========================
+START=2026-11-06T14:28:07-0300 END=2026-11-06T14:28:13-0300 EXIT=1 CWD=C:/Users/maury/AppData/Local/Temp/claude/d178e73f9d1bead4/df7ac816-6ae9-4308-9ebe-946bfa218259/scratchpad/checkpoint-original/task-manager-api HEAD=489ae25

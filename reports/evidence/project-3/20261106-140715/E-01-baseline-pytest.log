@@ -1,0 +1,35 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.2.0, pluggy-1.7.0 -- D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe
+rootdir: D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api
+configfile: pytest.ini
+testpaths: tests
+collecting ... collected 25 items
+
+tests/test_api.py::test_raiz PASSED                                      [  4%]
+tests/test_api.py::test_health PASSED                                    [  8%]
+tests/test_api.py::test_login_sucesso PASSED                             [ 12%]
+tests/test_api.py::test_login_credenciais_invalidas PASSED               [ 16%]
+tests/test_api.py::test_login_campos_obrigatorios PASSED                 [ 20%]
+tests/test_api.py::test_login_usuario_inativo PASSED                     [ 24%]
+tests/test_api.py::test_listar_usuarios_seed PASSED                      [ 28%]
+tests/test_api.py::test_buscar_usuario_com_tasks PASSED                  [ 32%]
+tests/test_api.py::test_crud_usuario PASSED                              [ 36%]
+tests/test_api.py::test_criar_usuario_validacoes PASSED                  [ 40%]
+tests/test_api.py::test_tasks_do_usuario PASSED                          [ 44%]
+tests/test_api.py::test_deletar_usuario_remove_suas_tasks PASSED         [ 48%]
+tests/test_api.py::test_listar_tasks_seed PASSED                         [ 52%]
+tests/test_api.py::test_buscar_task PASSED                               [ 56%]
+tests/test_api.py::test_crud_task PASSED                                 [ 60%]
+tests/test_api.py::test_task_vencida_marcada_como_overdue PASSED         [ 64%]
+tests/test_api.py::test_criar_task_validacoes PASSED                     [ 68%]
+tests/test_api.py::test_atualizar_task_validacoes PASSED                 [ 72%]
+tests/test_api.py::test_busca_de_tasks PASSED                            [ 76%]
+tests/test_api.py::test_stats_de_tasks PASSED                            [ 80%]
+tests/test_api.py::test_listar_categorias_seed PASSED                    [ 84%]
+tests/test_api.py::test_crud_categoria PASSED                            [ 88%]
+tests/test_api.py::test_categoria_validacoes PASSED                      [ 92%]
+tests/test_api.py::test_relatorio_resumo PASSED                          [ 96%]
+tests/test_api.py::test_relatorio_por_usuario PASSED                     [100%]
+
+============================= 25 passed in 6.78s ==============================
+START=2026-11-06T14:19:02-0300 END=2026-11-06T14:19:10-0300 EXIT=0

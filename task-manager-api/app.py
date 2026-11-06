@@ -1,34 +1,41 @@
+"""Composition root: cria a aplicação, injeta dependências e inicia o servidor."""
+import logging
+
 from flask import Flask
-from flask_cors import CORS
+
+from config.logging_config import configure_logging
+from config.settings import Settings
 from database import db
-from routes.task_routes import task_bp
-from routes.user_routes import user_bp
-from routes.report_routes import report_bp
-import os, sys, json, datetime
+from middlewares.error_handler import register_error_handlers
+from middlewares.security import register_security
+from routes import register_blueprints
+from services.auth_service import TokenSigner
 
-app = Flask(__name__)
+logger = logging.getLogger(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'super-secret-key-123'
 
-CORS(app)
-db.init_app(app)
+def create_app(settings=None):
+    settings = settings or Settings.from_env()
+    configure_logging(settings.LOG_LEVEL)
+    if not settings.SECRET_KEY_FROM_ENV:
+        logger.warning("SECRET_KEY não definida: usando chave aleatória (tokens expiram a cada reinício)")
 
-app.register_blueprint(task_bp)
-app.register_blueprint(user_bp)
-app.register_blueprint(report_bp)
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = settings.DATABASE_URL
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SECRET_KEY'] = settings.SECRET_KEY
+    app.extensions['token_signer'] = TokenSigner(settings.SECRET_KEY, settings.TOKEN_MAX_AGE)
 
-@app.route('/health')
-def health():
-    return {'status': 'ok', 'timestamp': str(datetime.datetime.now())}
+    db.init_app(app)
+    register_security(app, settings)
+    register_error_handlers(app)
+    register_blueprints(app)
 
-@app.route('/')
-def index():
-    return {'message': 'Task Manager API', 'version': '1.0'}
+    with app.app_context():
+        db.create_all()
+    return app
 
-with app.app_context():
-    db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    settings = Settings.from_env()
+    create_app(settings).run(debug=settings.DEBUG, host=settings.HOST, port=settings.PORT)
