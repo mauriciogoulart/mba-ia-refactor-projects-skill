@@ -1,0 +1,75 @@
+inicio=2026-11-06T13:37:21-03:00
+## SEC-02 literais de segredo
+(nenhum)
+## SEC-08/QLT-04 console.* e cartão completo em log
+(nenhum)
+## SEC-06 badCrypto / base64 truncado
+(nenhum)
+## SEC-01 SQL com interpolação de variável
+(nenhum)
+## ARC-03 estado global de módulo
+(nenhum)
+## ARC-04 infraestrutura (sqlite3) fora de src/database
+(nenhum)
+## ARC-05 contadores manuais / self
+(nenhum)
+## ARC-11 SELECT *
+(nenhum)
+## SQL fora de models/database
+(nenhum)
+## ARC-12 colunas REAL
+(nenhum)
+## QLT-01 PAID/DENIED literais fora de constants
+(nenhum)
+## SEC-12 senha padrão fixa
+(nenhum)
+## SEC-03/SEC-09 autenticação nas rotas
+src/routes/index.js:8:    router.post('/api/checkout', checkoutRateLimiter, validateCheckout, asyncHandler(checkoutController.checkout));
+src/routes/index.js:9:    router.get('/api/admin/financial-report', asyncHandler(reportController.financialReport));
+src/routes/index.js:10:    router.delete('/api/users/:id', asyncHandler(userController.remove));
+(nenhuma verificação de identidade — residual por contrato, Opção 1)
+## Integridade dos testes
+(saída vazia acima = testes inalterados)
+## git status do projeto
+ D src/AppManager.js
+ M src/app.js
+ D src/utils.js
+?? .claude/
+?? .env.example
+?? src/config/
+?? src/controllers/
+?? src/database/
+?? src/middlewares/
+?? src/models/
+?? src/routes/
+?? src/services/
+?? src/utils/
+## LOC depois (wc -l)
+   71 src/app.js
+    6 src/config/constants.js
+   17 src/config/settings.js
+   10 src/controllers/checkoutController.js
+    9 src/controllers/reportController.js
+   17 src/controllers/userController.js
+   47 src/database/connection.js
+   47 src/database/schema.js
+   20 src/middlewares/errorHandler.js
+   27 src/middlewares/rateLimit.js
+   12 src/middlewares/securityHeaders.js
+   16 src/middlewares/validateCheckout.js
+    9 src/models/auditLogModel.js
+    9 src/models/courseModel.js
+   10 src/models/enrollmentModel.js
+   10 src/models/paymentModel.js
+   22 src/models/reportModel.js
+   20 src/models/userModel.js
+   15 src/routes/index.js
+   57 src/services/checkoutService.js
+   18 src/services/passwordService.js
+   19 src/services/paymentGateway.js
+   40 src/services/reportService.js
+    9 src/utils/appError.js
+   25 src/utils/logger.js
+    4 src/utils/money.js
+  566 total
+fim=2026-11-06T13:37:23-03:00

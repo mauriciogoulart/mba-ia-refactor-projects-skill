@@ -1,0 +1,23 @@
+
+> desafio-arquitetura-ia-boilerplate@1.0.0 test
+> node --test
+
+▶ LMS API
+  ✔ relatório financeiro inicial reflete os seeds (26.9001ms)
+  ✔ checkout sem campos obrigatórios retorna 400 (90.3248ms)
+  ✔ checkout de curso inexistente retorna 404 (2.2084ms)
+  ✔ checkout com cartão recusado retorna 400 (9.5008ms)
+  ✔ checkout com sucesso cria usuário e matrícula (6.8984ms)
+  ✔ relatório financeiro reflete o checkout aprovado (2.4873ms)
+  ✔ checkout de usuário já existente reutiliza o cadastro (6.6152ms)
+  ✔ DELETE /api/users/:id retorna 200 (2.0951ms)
+✔ LMS API (3093.055ms)
+ℹ tests 8
+ℹ suites 1
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3207.8419
+inicio=2026-11-06T13:31:46-03:00 fim=2026-11-06T13:31:50-03:00 exit=0
