@@ -4,6 +4,9 @@ A aplicação é copiada para um diretório temporário, populada com `python se
 e iniciada com `python app.py`, para que o banco real (`instance/tasks.db`)
 nunca seja alterado. Os testes dependem apenas do contrato HTTP, não da
 estrutura interna do código.
+
+`api` envia o token do administrador do seed (rotas de dados exigem autenticação);
+`anonimo` não envia credencial.
 """
 import os
 import shutil
@@ -24,6 +27,16 @@ IGNORAR = shutil.ignore_patterns(
     "tests", ".venv", "venv", "__pycache__", "*.pyc", "*.db",
     "instance", ".pytest_cache", "node_modules",
 )
+# Credenciais de seed e configuração usadas apenas pelos testes.
+ADMIN_EMAIL = "joao@email.com"
+ADMIN_SENHA = "1234"
+ORIGEM_PERMITIDA = "http://permitido.local"
+AMBIENTE_TESTE = {
+    "SEED_ADMIN_PASSWORD": ADMIN_SENHA,
+    "SEED_USER_PASSWORD": "abcd",
+    "SEED_MANAGER_PASSWORD": "pass",
+    "CORS_ORIGINS": ORIGEM_PERMITIDA,
+}
 
 
 def _porta_em_uso(porta):
@@ -45,11 +58,16 @@ def _encerrar(proc):
 
 
 class Cliente:
-    def __init__(self, base):
+    def __init__(self, base, token=None):
         self.base = base
+        self.token = token
 
     def _req(self, metodo, caminho, **kw):
-        return requests.request(metodo, self.base + caminho, timeout=10, **kw)
+        headers = dict(kw.pop("headers", None) or {})
+        if self.token:
+            headers.setdefault("Authorization", f"Bearer {self.token}")
+        return requests.request(metodo, self.base + caminho, timeout=10,
+                                headers=headers, **kw)
 
     def get(self, caminho, **kw):
         return self._req("GET", caminho, **kw)
@@ -65,7 +83,7 @@ class Cliente:
 
 
 @pytest.fixture(scope="session")
-def api(tmp_path_factory):
+def servidor(tmp_path_factory):
     if _porta_em_uso(PORTA):
         pytest.exit(f"Porta {PORTA} já está em uso; encerre o processo e rode novamente.",
                     returncode=2)
@@ -76,7 +94,7 @@ def api(tmp_path_factory):
 
     caminho_log = raiz / "servidor.log"
     log = caminho_log.open("w", encoding="utf-8")
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", **AMBIENTE_TESTE}
     subprocess.run([sys.executable, "seed.py"], cwd=destino, env=env,
                    stdout=log, stderr=subprocess.STDOUT, check=True, timeout=60)
     proc = subprocess.Popen(
@@ -97,7 +115,20 @@ def api(tmp_path_factory):
                 time.sleep(0.3)
         else:
             pytest.exit("Timeout aguardando a aplicação subir em /health.", returncode=2)
-        yield Cliente(URL_BASE)
+        yield URL_BASE
     finally:
         _encerrar(proc)
         log.close()
+
+
+@pytest.fixture(scope="session")
+def api(servidor):
+    r = requests.post(servidor + "/login", json={"email": ADMIN_EMAIL, "password": ADMIN_SENHA},
+                      timeout=10)
+    assert r.status_code == 200, r.text
+    return Cliente(servidor, token=r.json()["token"])
+
+
+@pytest.fixture(scope="session")
+def anonimo(servidor):
+    return Cliente(servidor)

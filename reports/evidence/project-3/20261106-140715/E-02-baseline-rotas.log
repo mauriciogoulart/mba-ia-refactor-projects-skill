@@ -1,0 +1,23 @@
+GET / index
+GET /categories reports.get_categories
+POST /categories reports.create_category
+DELETE /categories/<int:cat_id> reports.delete_category
+PUT /categories/<int:cat_id> reports.update_category
+GET /health health
+POST /login users.login
+GET /reports/summary reports.summary_report
+GET /reports/user/<int:user_id> reports.user_report
+GET /tasks tasks.get_tasks
+POST /tasks tasks.create_task
+DELETE /tasks/<int:task_id> tasks.delete_task
+GET /tasks/<int:task_id> tasks.get_task
+PUT /tasks/<int:task_id> tasks.update_task
+GET /tasks/search tasks.search_tasks
+GET /tasks/stats tasks.task_stats
+GET /users users.get_users
+POST /users users.create_user
+DELETE /users/<int:user_id> users.delete_user
+GET /users/<int:user_id> users.get_user
+PUT /users/<int:user_id> users.update_user
+GET /users/<int:user_id>/tasks users.get_user_tasks
+exit=0

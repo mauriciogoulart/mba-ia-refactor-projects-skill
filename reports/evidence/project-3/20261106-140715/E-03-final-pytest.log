@@ -1,0 +1,45 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.2.0, pluggy-1.7.0 -- D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe
+rootdir: D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api
+configfile: pytest.ini
+testpaths: tests
+collecting ... collected 35 items
+
+tests/test_api.py::test_raiz PASSED                                      [  2%]
+tests/test_api.py::test_health PASSED                                    [  5%]
+tests/test_api.py::test_login_sucesso PASSED                             [  8%]
+tests/test_api.py::test_login_credenciais_invalidas PASSED               [ 11%]
+tests/test_api.py::test_login_campos_obrigatorios PASSED                 [ 14%]
+tests/test_api.py::test_login_usuario_inativo PASSED                     [ 17%]
+tests/test_api.py::test_listar_usuarios_seed PASSED                      [ 20%]
+tests/test_api.py::test_buscar_usuario_com_tasks PASSED                  [ 22%]
+tests/test_api.py::test_crud_usuario PASSED                              [ 25%]
+tests/test_api.py::test_criar_usuario_validacoes PASSED                  [ 28%]
+tests/test_api.py::test_tasks_do_usuario PASSED                          [ 31%]
+tests/test_api.py::test_deletar_usuario_remove_suas_tasks PASSED         [ 34%]
+tests/test_api.py::test_listar_tasks_seed PASSED                         [ 37%]
+tests/test_api.py::test_buscar_task PASSED                               [ 40%]
+tests/test_api.py::test_crud_task PASSED                                 [ 42%]
+tests/test_api.py::test_task_vencida_marcada_como_overdue PASSED         [ 45%]
+tests/test_api.py::test_criar_task_validacoes PASSED                     [ 48%]
+tests/test_api.py::test_atualizar_task_validacoes PASSED                 [ 51%]
+tests/test_api.py::test_busca_de_tasks PASSED                            [ 54%]
+tests/test_api.py::test_stats_de_tasks PASSED                            [ 57%]
+tests/test_api.py::test_listar_categorias_seed PASSED                    [ 60%]
+tests/test_api.py::test_crud_categoria PASSED                            [ 62%]
+tests/test_api.py::test_categoria_validacoes PASSED                      [ 65%]
+tests/test_api.py::test_relatorio_resumo PASSED                          [ 68%]
+tests/test_api.py::test_relatorio_por_usuario PASSED                     [ 71%]
+tests/test_contratos.py::test_ct01_token_forjado_e_rejeitado PASSED      [ 74%]
+tests/test_contratos.py::test_ct02_rotas_de_dados_exigem_token PASSED    [ 77%]
+tests/test_contratos.py::test_ct02_rotas_publicas_continuam_abertas PASSED [ 80%]
+tests/test_contratos.py::test_ct02_token_valido_libera_acesso PASSED     [ 82%]
+tests/test_contratos.py::test_ct03_alterar_e_excluir_usuario_exige_permissao PASSED [ 85%]
+tests/test_contratos.py::test_ct04_cadastro_anonimo_nao_define_role_privilegiado PASSED [ 88%]
+tests/test_contratos.py::test_ct05_password_ausente_nas_respostas PASSED [ 91%]
+tests/test_contratos.py::test_ct06_cors_somente_para_origens_configuradas PASSED [ 94%]
+tests/test_contratos.py::test_ct07_tipo_invalido_retorna_400 PASSED      [ 97%]
+tests/test_contratos.py::test_c06_validacoes_adicionais PASSED           [100%]
+
+============================= 35 passed in 8.43s ==============================
+START=2026-11-06T14:29:01-0300 END=2026-11-06T14:29:11-0300 EXIT=0
