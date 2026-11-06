@@ -1,0 +1,70 @@
+E-00 · Evidência da Fase 1 (análise somente leitura)
+Projeto: ecommerce-api-legacy (Path: ecommerce-api-legacy)
+Run: 2026-11-06T13:19:47-03:00   Run id: 20261106-131947
+
+================================
+PHASE 1: PROJECT ANALYSIS
+================================
+Language:      JavaScript (Node.js v24.11.1 em uso; package.json sem "engines")
+Framework:     Express 4.22.1 (manifesto ^4.18.2, lock 4.22.1) (confiança: alta)
+Dependencies:  express ^4.18.2, sqlite3 ^5.1.6 (lock 5.1.7); testes com node:test nativo (sem dependência)
+Domain:        API de LMS com checkout (cursos, matrículas, pagamentos, usuários) e relatório financeiro
+Architecture:  monolito-sem-camadas — src/AppManager.js concentra conexão, schema, seed, rotas, regra de negócio e persistência
+Source files:  3 files analyzed (~180 lines)
+DB tables:     users, courses, enrollments, payments, audit_logs (SQLite :memory:, local/descartável)
+Entry point:   src/app.js — `npm start` (node src/app.js), porta 3000
+Routes found:  3 (2 administrativas/destrutivas)
+Validation:    tests: unit=não integration=sim e2e=não | run-docs=sim | scripts=sim | api-collection=sim
+================================
+
+Arquivos-fonte contados (método: `wc -l` via Git Bash, classe A):
+  src/app.js          14
+  src/AppManager.js  141
+  src/utils.js        25
+  Total              180
+Testes (fora da contagem): test/api.test.js 127
+Ignorados: node_modules/, package-lock.json, .claude/ (skill), README.md, api.http (coleção, não código)
+
+Papéis por arquivo:
+  src/app.js         Entrypoint / composition root (express(), json, listen)
+  src/AppManager.js  Infra de banco (new sqlite3.Database), schema (DDL), seed, rotas, controller, regra de negócio, acesso a dados  -> 6 papéis
+  src/utils.js       Config (com segredos literais), estado global mutável (cache), "hash" de senha, logger -> 3+ papéis
+
+Rotas:
+  POST   /api/checkout                 src/AppManager.js:28   sem autenticação   não administrativa (cria usuário, matrícula, pagamento)
+  GET    /api/admin/financial-report   src/AppManager.js:80   sem autenticação   ADMINISTRATIVA (relatório financeiro, nomes de alunos)
+  DELETE /api/users/:id                src/AppManager.js:131  sem autenticação   DESTRUTIVA
+
+Entradas do usuário: body (usr, eml, pwd, c_id, card) em POST /api/checkout; params.id em DELETE /api/users/:id
+Saídas sensíveis: relatório financeiro (nomes de alunos e valores pagos)
+Segredos/config: src/utils.js:2-5 (literais: dbUser "admi***", dbPass "senh***", paymentGatewayKey "pk_l***", smtpUser); nenhuma leitura de ambiente
+Integrações externas: gateway de pagamento simulado (prefixo do cartão), sem chamada externa real
+
+Inventário de validação:
+  Testes: test/api.test.js — runner node:test (`node --test`), 8 testes de integração caixa-preta via HTTP
+          (spawn de `node src/app.js` na porta 3000, banco em memória recriado a cada execução)
+  Instruções: README.md:7-10 (`npm install`, `npm start`); package.json:7-8 (start, test)
+  Scripts: package.json#scripts start=`node src/app.js` (B), test=`node --test` (B)
+  CI: nenhum (.github ausente na raiz do repositório)
+  Coleção: api.http — 4 requisições (2 POST /api/checkout, GET /api/admin/financial-report, DELETE /api/users/1), @baseUrl http://localhost:3000
+  UI/screenshot: não aplicável (API pura)
+
+Comandos descobertos:
+  Instalar:   npm install (README.md:8) — classe C; node_modules já presente (express, sqlite3 com node_sqlite3.node compilado) => não necessário
+  Subir:      npm start (README.md:9; package.json:7) — classe B (banco em memória)
+  Testar:     npm test => node --test (package.json:8) — classe B
+  Checar:     node --check <arquivo> (toolchain) — classe B
+  Porta/URL:  3000 (src/utils.js:6; README.md:12; api.http:1)
+  Saúde:      sem rota de saúde; o teste usa GET /api/admin/financial-report como prontidão (test/api.test.js:34)
+
+Estrutura ANTES:
+ecommerce-api-legacy/
+├── api.http
+├── package.json
+├── README.md
+├── src/
+│   ├── app.js
+│   ├── AppManager.js
+│   └── utils.js
+└── test/
+    └── api.test.js

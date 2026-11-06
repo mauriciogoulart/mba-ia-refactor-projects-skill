@@ -1,0 +1,58 @@
+inicio=2026-11-06T13:32:45-03:00
+### 1 Checkout - sucesso (api.http:3-13)
+$ curl -X POST http://localhost:3000/api/checkout -H Content-Type: application/json -d {"usr":"Guilherme","eml":"gui@fullcycle.com.br","pwd":"senhaforte","c_id":2,"card":"4111222233334444"}
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 35
+ETag: W/"23-M21Cm8ianfku3j1jgcW8LNf4kGo"
+Date: Fri, 06 Nov 2026 16:32:45 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"msg":"Sucesso","enrollment_id":2}
+[status=200 tempo=0,031974s]
+
+### 2 Checkout - pagamento recusado (api.http:15-25)
+$ curl -X POST http://localhost:3000/api/checkout -H Content-Type: application/json -d {"usr":"João","eml":"joao@teste.com","pwd":"123","c_id":1,"card":"5111222233334444"}
+HTTP/1.1 400 Bad Request
+X-Powered-By: Express
+Content-Type: text/html; charset=utf-8
+Content-Length: 18
+ETag: W/"12-cCbpbDoP+QR6rY78eoVsId2FZ+s"
+Date: Fri, 06 Nov 2026 16:32:45 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+Pagamento recusado
+[status=400 tempo=0,014584s]
+
+### 3 Relatório financeiro administrativo (api.http:27-28) [K-06a, D aprovado]
+$ curl http://localhost:3000/api/admin/financial-report
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 174
+ETag: W/"ae-sccQhCgVnC8qnaSMFYFdSvBlPsI"
+Date: Fri, 06 Nov 2026 16:32:45 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+[{"course":"Docker","revenue":497,"students":[{"student":"Guilherme","paid":497}]},{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]}]
+[status=200 tempo=0,007784s]
+
+### 4 Deletar usuário (api.http:30-31) [K-06b, D aprovado]
+$ curl -X DELETE http://localhost:3000/api/users/1
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: text/html; charset=utf-8
+Content-Length: 74
+ETag: W/"4a-vthBeOP7zzO+HHtdIi6mpA3d8h8"
+Date: Fri, 06 Nov 2026 16:32:45 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+Usuário deletado, mas as matrículas e pagamentos ficaram sujos no banco.
+[status=200 tempo=0,014635s]
+
+fim=2026-11-06T13:32:45-03:00

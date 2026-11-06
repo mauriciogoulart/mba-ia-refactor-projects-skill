@@ -1,0 +1,8 @@
+
+> desafio-arquitetura-ia-boilerplate@1.0.0 start
+> node src/app.js
+
+Frankenstein LMS rodando na porta 3000...
+Processando cartão 4111*** na chave pk_l***
+[LOG] Salvando no cache: last_checkout_2
+Processando cartão 5111*** na chave pk_l***

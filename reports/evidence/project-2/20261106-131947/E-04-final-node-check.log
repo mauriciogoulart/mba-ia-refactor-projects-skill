@@ -1,0 +1,29 @@
+inicio=2026-11-06T13:36:15-03:00
+OK   src/app.js
+OK   src/config/constants.js
+OK   src/config/settings.js
+OK   src/controllers/checkoutController.js
+OK   src/controllers/reportController.js
+OK   src/controllers/userController.js
+OK   src/database/connection.js
+OK   src/database/schema.js
+OK   src/middlewares/errorHandler.js
+OK   src/middlewares/rateLimit.js
+OK   src/middlewares/securityHeaders.js
+OK   src/middlewares/validateCheckout.js
+OK   src/models/auditLogModel.js
+OK   src/models/courseModel.js
+OK   src/models/enrollmentModel.js
+OK   src/models/paymentModel.js
+OK   src/models/reportModel.js
+OK   src/models/userModel.js
+OK   src/routes/index.js
+OK   src/services/checkoutService.js
+OK   src/services/passwordService.js
+OK   src/services/paymentGateway.js
+OK   src/services/reportService.js
+OK   src/utils/appError.js
+OK   src/utils/logger.js
+OK   src/utils/money.js
+import OK: createApp = function
+fim=2026-11-06T13:36:17-03:00 exit=0
