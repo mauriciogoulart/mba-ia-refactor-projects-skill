@@ -25,36 +25,36 @@ Decisões do usuário para a v2:
 
 | # | Item | Status | Observação |
 |---|---|---|---|
-| 0.1 | Criar branch `entrega-v2` a partir de `main` (a772d66) | ⏳ | |
-| 0.2 | Criar tag local `entrega-v1` em a772d66 | ⏳ | |
-| 0.3 | Mover `reports/` e `validacoes/` para `historico/entrega-v1/`; copiar README | ⏳ | |
-| 0.4 | Criar `historico/entrega-v1/LEIA-ME.md` | ⏳ | |
-| 0.5 | Commit do arquivamento | ⏳ | |
+| 0.1 | Criar branch `entrega-v2` a partir de `main` (a772d66) | ✅ | |
+| 0.2 | Criar tag local `entrega-v1` em a772d66 | ✅ | push só na Fase 5 |
+| 0.3 | Mover `reports/` e `validacoes/` para `historico/entrega-v1/`; copiar README | ✅ | `git mv` (histórico preservado) |
+| 0.4 | Criar `historico/entrega-v1/LEIA-ME.md` | ✅ | |
+| 0.5 | Commit do arquivamento | ✅ | `296406f` |
 
 ## Fase 1 — Skill versão 1.2
 
 | # | Item | Status | Observação |
 |---|---|---|---|
-| 1.1 | `SKILL.md` | ⏳ | |
-| 1.2 | `07-politica-comandos-aprovacoes.md` (P3 com 3 opções, P4 execução local) | ⏳ | |
-| 1.3 | `05-playbook-refatoracao.md` (matriz, P-09, novo P-20, P-05) | ⏳ | |
-| 1.4 | `02-catalogo-antipatterns.md` (SEC-14) | ⏳ | |
-| 1.5 | `06-protocolo-validacao.md` (testes de prova, execução local autenticada) | ⏳ | |
-| 1.6 | `03-template-relatorio.md` | ⏳ | |
-| 1.7 | `01-analise-projeto.md` (inventário de autenticação/seed) | ⏳ | |
-| 1.8 | Revisão de coerência (sem "Opção 1/Opção 2" remanescente) | ⏳ | |
-| 1.9 | Revisão independente da skill por subagente | ⏳ | |
-| 1.10 | Copiar para os 3 projetos e conferir com `diff -r` | ⏳ | |
-| 1.11 | Commit da skill 1.2 | ⏳ | |
+| 1.1 | `SKILL.md` | ✅ | regra 6 (testes de prova em qualquer opção), nova regra 10 (piso de segurança), P3/P4 e segunda confirmação na Fase 2, reauditoria conta CRITICAL/HIGH |
+| 1.2 | `07-politica-comandos-aprovacoes.md` (P3 com 3 opções, P4 execução local) | ✅ | P3: Refatorar · Manter contrato* · Híbrido; segunda confirmação (§4.2); §5 execução local autenticada |
+| 1.3 | `05-playbook-refatoracao.md` (matriz, P-09, novo P-20, P-05) | ✅ | matriz de 3 colunas; P-09 remete ao P-20; P-20 com antes/depois Node e Python e provas |
+| 1.4 | `02-catalogo-antipatterns.md` (SEC-14) | ✅ | SEC-14 corrigido por P-20; checagem final (g): todo CRITICAL/HIGH com correção prevista |
+| 1.5 | `06-protocolo-validacao.md` (testes de prova, execução local autenticada) | ✅ | V4 = execução local autenticada (§5.1); T4 em qualquer opção; veredito "com ressalvas" |
+| 1.6 | `03-template-relatorio.md` | ✅ | versão 1.2 / catálogo 1.1; tabela de contrato por opção; seção "Execução local autenticada"; residuais CRITICAL/HIGH em destaque |
+| 1.7 | `01-analise-projeto.md` (inventário de autenticação/seed) | ✅ | |
+| 1.8 | Revisão de coerência (sem "Opção 1/Opção 2" remanescente) | ✅ | busca por "Opção 1/2", "sondagem ad hoc" e "só na Opção" = vazia |
+| 1.9 | Revisão independente da skill por subagente | ✅ | 0 bloqueantes, 7 importantes, 11 menores — todos aplicados: exceção do diretório temporário na classe X; status `ALTERADO (correção F-xxx, sem contrato)`; P-20 com lista branca de ambiente, sem mock padrão, prefixos filtrados, `Map` de provedores e testes extras; CRITICAL/HIGH novo fora do escopo ⇒ pergunta (sem reversão); "parcial" conta como sem correção; P4 = Não ⇒ veredito qualificado; pré-condição de prova generalizada; ressalva como sufixo; ordem das opções; variante de credencial no payload no P-05; catálogo 1.2 |
+| 1.10 | Copiar para os 3 projetos e conferir com `diff -r` | ✅ | `git diff --no-index` vazio entre as 3 cópias |
+| 1.11 | Commit da skill 1.2 | ✅ | ver registro |
 
 ## Fase 2 — Restaurar o código-fonte original
 
 | # | Item | Status | Observação |
 |---|---|---|---|
-| 2.1 | Restaurar os 3 projetos a partir de 5303107 | ⏳ | |
-| 2.2 | Reaplicar a skill 1.2 nos 3 projetos | ⏳ | |
-| 2.3 | Conferir suítes no original (23 / 8 / 25) e diff só da skill | ⏳ | |
-| 2.4 | Commit da restauração | ⏳ | |
+| 2.1 | Restaurar os 3 projetos a partir de 5303107 | ✅ | `git rm -r` + `git checkout 5303107`; diretórios residuais só com `__pycache__` removidos |
+| 2.2 | Reaplicar a skill 1.2 nos 3 projetos | ✅ | `git checkout HEAD -- <projeto>/.claude` (commit da skill 1.2) |
+| 2.3 | Conferir suítes no original (23 / 8 / 25) e diff só da skill | ✅ | 23 passed · 8 pass · 25 passed; `git diff 5303107` fora de `.claude/` vazio |
+| 2.4 | Commit da restauração | ✅ | `146f7d9` |
 
 ## Fase 3 — Executar a skill nos 3 projetos
 
@@ -93,3 +93,6 @@ Decisões do usuário para a v2:
 
 | Data/hora | Evento |
 |---|---|
+| 2026-11-16 | Fase 0: branch `entrega-v2`, tag `entrega-v1`, arquivamento (`296406f`) |
+| 2026-11-16 | Fase 1: skill 1.2 editada, revisada por subagente independente, ajustada e copiada para os 3 projetos (`20f9e72`) |
+| 2026-11-16 | Fase 2: código original restaurado e suítes conferidas (`146f7d9`) |
