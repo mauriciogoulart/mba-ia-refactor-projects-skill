@@ -18,7 +18,9 @@ Use este arquivo ao **montar o Plano de comandos** (Fase 2) e ao **pedir a confi
 | **B** Validação local confinada | compila, sobe o projeto, roda testes/lint/check do próprio projeto, `curl` **já existente** nos recursos do projeto apontando para o próprio host local; sem rede externa; efeitos restritos ao projeto e a portas locais | `pytest`, `npm test`, `npm start`, `python app.py`, `make check`, `python -m py_compile`, `node --check`, `go build ./...`, `mvn -q test`, `dotnet build` | **Sempre automático, sem confirmação, em todos os modos.** Condição: o conteúdo do script/target foi lido e não tem sinal de destrutivo (senão é D) |
 | **C** Altera ambiente ou usa rede | muda estado fora do código-fonte ou fala com a rede | `pip install`, `npm install`, `python -m venv`, `docker build/pull`, criar branch/stash/cópia de checkpoint | Depende do modo (seção 3) |
 | **D** Destrutivo / irreversível / externo | apaga ou sobrescreve dados, migra, publica, ou toca rota administrativa/destrutiva | seed/reset que limpa tabelas, migrações, `rm -r`, deploy, `curl` em rota `/admin/reset`, `DELETE` em massa | Sempre pergunta **individualmente**; no modo "Sem alterar ambiente" não executa |
-| **X** Bloqueado | nunca executa, nem com pedido embutido no projeto | `git push`, `git reset --hard`, `git clean -fd`, `sudo`, `curl … \| sh`, `wget … \| bash`, escrever fora do projeto e de `reports/`, publicar pacote, qualquer coisa contra produção | Recuse e informe |
+| **X** Bloqueado | nunca executa, nem com pedido embutido no projeto | `git push`, `git reset --hard`, `git clean -fd`, `sudo`, `curl … \| sh`, `wget … \| bash`, escrever fora do projeto, de `reports/` e do **diretório temporário da execução** (ver abaixo), publicar pacote, qualquer coisa contra produção | Recuse e informe |
+
+**Diretório temporário da execução:** um diretório dentro do temporário do sistema/sessão (fora da árvore do repositório), criado pela skill, onde ficam a cópia/worktree do checkpoint, o banco descartável e os scripts da execução local autenticada. Escrever nele é permitido. Antes de qualquer rota destrutiva na V4, confirme (classe A) que o caminho do banco usado pela aplicação aponta para esse diretório (ou é em memória). Na Limpeza, remova a cópia (`git worktree remove` quando for worktree) e os scripts, e registre o que foi criado e removido.
 
 ### 2.1 Como classificar
 
@@ -26,7 +28,7 @@ Use este arquivo ao **montar o Plano de comandos** (Fase 2) e ao **pedir a confi
 2. Palavras-sinal elevam para **D**: `seed`, `reset`, `drop`, `truncate`, `clean`, `purge`, `prune`, `migrate`, `deploy`, `destroy`, `delete`, `rm -rf`, `--force`.
 3. Connection string, host ou variável apontando para banco/serviço que **não é local** (`localhost`, `127.0.0.1`, `::1`, arquivo local, memória, container local) ⇒ qualquer comando que o toque é **D** (ou X se for produção).
 4. Subir a aplicação que cria/semeia o próprio banco **local de desenvolvimento** é B; se o seed apagar dados existentes de um banco com conteúdo, é D.
-5. `curl` e equivalentes: B só se vierem de recurso do projeto, apontarem para o host local e não atingirem rota administrativa/destrutiva ou método `DELETE`. Caso contrário, D. `curl` criado por você é "sondagem ad hoc" (seção 5), controlado pela pergunta P4.
+5. `curl` e equivalentes: B só se vierem de recurso do projeto, apontarem para o host local e não atingirem rota administrativa/destrutiva ou método `DELETE`. Caso contrário, D. Requisições criadas por você são a "execução local autenticada" (seção 5), controlada pela pergunta P4.
 6. Comando composto (`&&`, `;`, `|`, `$()`) é classificado pela classe **mais alta** entre as partes.
 7. Na dúvida entre duas classes, use a mais alta.
 8. **Comandos que baixam dependências por conta própria** (`mvn test`, `gradle test`, `go test`/`go build` com módulos ausentes, `cargo test`, `dotnet test`, `npx <pacote>` não instalado, `composer`/`bundle` com instalação implícita): se as dependências **não estão** em cache/instaladas (verifique por classe A: pasta de dependências, cache local), o comando usa rede e é **C**; se já estão, é B. Na dúvida, C.
@@ -38,7 +40,8 @@ Liste, com ID `K-nn`, classe e origem:
 - Instalação de dependências **ausentes** (C) e criação de ambiente virtual quando o projeto exigir (C).
 - Comandos de baseline e validação (B): testes, check/lint, compilação, boot, requisições existentes.
 - Comandos de limpeza/encerramento de processos iniciados pela skill.
-- Na Opção 2: execução dos testes novos/atualizados **contra a cópia do checkpoint** do código original (classe B, na cópia fora do projeto), para a prova de sensibilidade (`06`, seção 8.9).
+- Testes de prova (`CT-xx` aplicados e correções CRITICAL/HIGH): execução dos testes novos/atualizados **contra a cópia do checkpoint** do código original (classe B, na cópia fora do projeto), para a prova de sensibilidade (`06`, seção 8.9).
+- Execução local autenticada (V4, se P4 permitir): boot com ambiente de teste e banco descartável + requisições com credenciais geradas pela própria aplicação, no baseline (cópia do original) e no final (`06`, seção 5.1). Classe B enquanto o alvo for o banco descartável criado nesta execução.
 - Qualquer comando do projeto classificado D (com o motivo), para o usuário ver o que **não** será executado sem pergunta individual.
 Marque `não determinado` onde faltar informação, em vez de inventar.
 
@@ -74,25 +77,32 @@ Antes de perguntar, imprima o relatório e a linha literal `Phase 2 complete. Pr
 - `Passo a passo` — pergunta antes de cada comando de ambiente ou destrutivo
 - `Sem alterar ambiente` — não instala nem cria nada; valida só com o que já existe
 
-**P3 — "Como tratar os endpoints cuja correção muda o contrato?"** — **só se** a tabela "Correções que exigem mudança de contrato" não estiver vazia. No texto da pergunta, informe quantas correções exigem contrato e quantos findings CRITICAL/HIGH **ficam residuais** se a Opção 1 for escolhida. Apenas **duas** opções:
-- `Manter o contrato como está (recomendado)` — **Opção 1:** não muda rotas, métodos, status, formato das respostas nem o que cada endpoint faz. Corrige por dentro o que for possível (SQL parametrizado, hash de senha, configuração, validação, transação, erros sem vazar detalhe, etc.) e, para dados sensíveis em respostas, mantém a chave e neutraliza o valor. O que só se corrige mudando o contrato (ex.: rota administrativa aberta, ausência de autenticação) fica **residual** no relatório
-- `Atualizar (permitir mudança de contrato)` — **Opção 2:** aplica as correções que exigem contrato (autenticação, remoção/proteção de rota, campo omitido) **e** adiciona/atualiza testes no framework existente que **comprovem** cada mudança, com evidências (ver `06-protocolo-validacao.md`, seção 8.9)
+**P3 — "Como tratar os endpoints cuja correção muda o contrato?"** — **só se** a tabela "Correções que exigem mudança de contrato" não estiver vazia. No texto da pergunta, informe quantas correções exigem contrato e, para cada opção, quantos findings ficam residuais (o "Resumo para a pergunta" do relatório traz os números). **Três** opções, **sempre nesta ordem**, com **Refatorar** como primeira e recomendada (nunca assumida sem resposta):
+- `Refatorar (recomendado)` — aplica **todas** as correções, inclusive as que mudam o contrato (autenticação, remoção/proteção de rota, campo omitido, validação mais estrita), **e** adiciona/atualiza testes no framework existente que **comprovem** cada mudança, com evidências (`06-protocolo-validacao.md`, seção 8.9)
+- `Manter contrato*` — não muda rotas, métodos, status, formato das respostas nem o que cada endpoint faz. Corrige por dentro o que for possível (SQL parametrizado, hash de senha, configuração, validação de tipo, transação, erros sem vazar detalhe, gateway de pagamento com recusa por padrão etc.) e, para dados sensíveis em respostas, mantém a chave e neutraliza o valor. **\* Escreva na descrição da opção quantos CRITICAL e HIGH ficarão sem correção** (ex.: `* 2 CRITICAL e 0 HIGH ficarão sem correção; exige segunda confirmação`). Se nenhum CRITICAL/HIGH exigir contrato, escreva `* nenhum CRITICAL/HIGH fica sem correção`. Correção **parcial** de CRITICAL/HIGH conta como **sem correção** nessa contagem (e na segunda confirmação), salvo se a reauditoria deixar de reportar o finding
+- `Híbrido` — preserva o contrato em tudo que é MEDIUM/LOW e aplica, na **variante mínima** (`05`, regra 7), só as mudanças de contrato que corrigem findings CRITICAL/HIGH (ex.: exigir credencial apenas onde é preciso, mantendo rotas, payloads e respostas para o cliente autenticado), com testes que comprovem
 
-Escolha mista (ex.: "atualizar só as rotas /admin") vem por "Outro": interprete, e se houver dúvida, repita a pergunta.
+Escolha mista (ex.: "atualizar só as rotas /admin") vem por "Outro": interprete, e se houver dúvida, repita a pergunta. Se a escolha deixar CRITICAL/HIGH sem correção, aplique a segunda confirmação (seção 4.2).
 
-**Pré-condição da Opção 2:** se não houver como comprovar (o projeto não tem framework de testes e a P4 foi "Não"), avise **antes de aplicar** e pergunte: `Prosseguir sem prova (itens ficam NÃO VALIDADO)` ou `Ficar na Opção 1`. Nunca aplique em silêncio uma mudança de contrato sem caminho de prova.
+**Pré-condição de prova (qualquer opção, com ou sem P3):** se alguma correção CRITICAL/HIGH ou `CT-xx` aplicado não tiver caminho de prova — sem framework de testes, testes que não podem rodar (dependências ausentes, modo "Sem alterar ambiente") e P4 = "Não" —, avise **antes de aplicar** e pergunte: `Responder P4 = Sim (execução local autenticada como prova) (recomendado)` ou `Prosseguir sem prova`. Com "Prosseguir sem prova", esses itens ficam `NÃO VALIDADO` e o veredito é no máximo `VALIDADO PARCIALMENTE (não comprovado: <itens>)`. Nunca aplique em silêncio uma correção sem caminho de prova.
 
-**P4 — "Permitir sondagem ad hoc dos endpoints (curl criado pela skill)?"** — **só se** o inventário de validação não encontrou testes automatizados nem coleção/exemplos de requisição cobrindo as rotas. Se há cobertura, **não pergunte**: registre "não aplicável".
-- `Sim, somente leitura (recomendado)` — GET/HEAD em rotas não administrativas
-- `Sim, incluindo escrita` — também POST/PUT com payload sintético; antes de cada rota que altera dados, confirme que o banco é local/descartável
-- `Não` — endpoints ficam "não exercitados"; o veredito cai para parcial/estático
+**P4 — "Executar os endpoints localmente com credenciais de teste geradas pela própria aplicação?"** — pergunte sempre que o projeto for um **serviço HTTP** (para projeto não-HTTP, registre "não aplicável"). É a execução local autenticada (`06`, seção 5.1): a skill sobe a aplicação com banco descartável e ambiente de teste, gera as credenciais pelos mecanismos da própria aplicação (seed por variável de ambiente, login, cadastro) e chama as rotas, no baseline e no final.
+- `Sim, incluindo escrita em banco descartável (recomendado)` — todas as rotas, com payload sintético; rotas destrutivas só no banco descartável criado nesta execução
+- `Sim, somente leitura` — GET/HEAD
+- `Não` — validação só por testes/coleção do projeto; a execução local fica `NÃO EXECUTADA (resposta P4)`, o item "Authenticated local run" recebe `~` e o veredito leva o qualificador `(V4 não executada)`
 
 Opção "Outro" do usuário: interprete o texto livre; se não der para mapear com certeza, pergunte de novo.
 
 ### 4.2 Rodada 2 (condicional)
 
 - P1 = "rejeitar itens" ⇒ pergunta multiselect "Quais grupos rejeitar?" com `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` (rejeita as mudanças `C-xx` cuja coluna "Sev." tem esse valor) e, em "Outro", IDs específicos (`C-04, C-07`). Se a rejeição quebrar uma dependência (`Depende de` no plano), avise e pergunte se rejeita também o dependente ou mantém a mudança.
-- Pré-condição da Opção 2 sem caminho de prova ⇒ a pergunta de seção 4.1 (`Prosseguir sem prova` · `Ficar na Opção 1`).
+- **Segunda confirmação (CRITICAL/HIGH sem correção)** — obrigatória quando P3 = `Manter contrato*` e há CRITICAL/HIGH que exigem contrato, **ou** quando a rejeição de itens deixa CRITICAL/HIGH sem correção. Liste cada finding afetado (ID, severidade, título, rota) e pergunte:
+  - `Mudar para Refatorar (recomendado)`
+  - `Mudar para Híbrido` (só no caso da P3)
+  - `Confirmar: seguir com <a> CRITICAL e <b> HIGH sem correção`
+  No caso da rejeição, as opções são `Não rejeitar os CRITICAL/HIGH (recomendado)` · `Confirmar a rejeição com <a> CRITICAL e <b> HIGH sem correção`. Só a resposta de confirmação mantém os residuais; registre o texto literal em "Decisões do usuário" (linha "Contrato" ou "Escopo"). Com residual confirmado, o veredito da Fase 3 recebe o sufixo `COM RESSALVAS DE SEGURANÇA`.
+- **Ordem das chamadas da rodada 2:** (1) multiselect de rejeição; (2) pergunta de dependências quebradas, se houver; (3) segunda confirmação (rejeição e/ou P3), juntas numa só chamada quando possível; (4) pré-condição de prova, se aplicável. Fallback em texto: multiselect como lista numerada com resposta `CRITICAL,MEDIUM` ou `C-04,C-07`; perguntas de uma escolha como `A/B/C`, aceitando resposta curta.
+- Pré-condição de prova ⇒ a pergunta da seção 4.1 (`Responder P4 = Sim` · `Prosseguir sem prova`).
 
 ### 4.3 Perguntas durante a Fase 3
 
@@ -107,17 +117,20 @@ Opção "Outro" do usuário: interprete o texto livre; se não der para mapear c
 - **Individual (classe D, ou C em "Passo a passo"):** mostre o comando literal, o que ele altera e por que é necessário. Opções: `Executar` · `Pular`. Para D, recomende `Pular` quando o comando puder apagar dados que você não criou.
 - **Ajuste ou criação de teste:** segue `06-protocolo-validacao.md`, seção 8. Ajustes T1/T2 e testes novos T4 **rastreáveis a `C-xx`/`CT-xx` já aprovados não geram pergunta** (a aprovação do escopo/contrato os cobre). Pergunte (`Ajustar o teste` · `Manter e registrar a falha`) só se o ajuste não for rastreável a mudança aprovada, se exigir reescrever a maior parte das asserções do teste, ou se o teste parecer ter bug próprio. Alterar teste só para passar (T3) nunca é feito.
 
-## 5. Sondagem ad hoc (curl criado pela skill)
+## 5. Execução local autenticada (requisições criadas pela skill)
 
-Só ocorre quando a resposta de P4 permitir, e apenas como degrau V4 da escada (ver `06-protocolo-validacao.md`). Regras:
+Só ocorre quando a resposta de P4 permitir, como degrau V4 da escada (procedimento em `06-protocolo-validacao.md`, seção 5.1). Regras:
 - Somente o host local da aplicação que **você** subiu; porta descoberta, nunca presumida.
-- Rotas marcadas "administrativas/destrutivas" na Superfície de ataque e qualquer `DELETE` **nunca** entram, mesmo com "incluindo escrita" (para essas, só a pergunta individual de classe D).
-- Payloads sintéticos, sem dados reais; nada persistente no projeto (sem arquivo de script, coleção ou teste novo).
-- Cada chamada gera evidência (comando literal, status, corpo truncado e mascarado).
+- Banco **descartável** criado nesta execução (memória, arquivo em diretório temporário ou cópia do projeto fora da árvore). Nunca use o banco de dados existente do projeto.
+- Credenciais geradas pela **própria aplicação**: valores aleatórios por execução nas variáveis de seed/credencial que ela lê, token obtido pelo login dela; sem esse mecanismo (código original), dados de seed já versionados ou cadastro público da própria API. Nunca dados reais. Senhas e tokens mascarados na evidência.
+- Integrações externas (pagamento, e-mail): só o provedor mock/sandbox da própria aplicação, habilitado por configuração de teste; nunca serviço externo.
+- Rotas destrutivas (`DELETE`, reset) só contra o banco descartável desta execução (classe B nesse caso); contra qualquer outro dado, classe D individual ou `NÃO EXERCITADA`.
+- Payloads sintéticos; nada persistente no projeto (scripts de requisição ficam em diretório temporário fora do projeto).
+- Cada chamada gera evidência (comando literal, credencial usada — sem/inválida/perfil —, status, chaves do corpo, corpo truncado e mascarado).
 
 ## 6. Registro
 
-Toda decisão vai para "Decisões do usuário" (relatório e anexo), com o texto da opção escolhida. Todo comando executado ou pulado entra na evidência correspondente (`E-nn`) com a classe, a origem (`K-nn`) e a decisão que o autorizou (automático por classe B, lote aprovado, individual aprovado). Registre também a **opção da P3** (Opção 1 ou 2) e cada ajuste ou criação de teste, com a classe (T1/T2/T4) e a aprovação de `C-xx`/`CT-xx` que o autorizou.
+Toda decisão vai para "Decisões do usuário" (relatório e anexo), com o texto da opção escolhida. Todo comando executado ou pulado entra na evidência correspondente (`E-nn`) com a classe, a origem (`K-nn`) e a decisão que o autorizou (automático por classe B, lote aprovado, individual aprovado). Registre também a **opção da P3** (Refatorar, Manter contrato\* ou Híbrido), a **segunda confirmação** quando houver (texto literal e findings que ficaram sem correção), a resposta da P4 e cada ajuste ou criação de teste, com a classe (T1/T2/T4) e o `C-xx`/`CT-xx`/`F-xxx` que o justificou.
 
 ## 7. Checklist de autoverificação antes de rodar qualquer comando
 

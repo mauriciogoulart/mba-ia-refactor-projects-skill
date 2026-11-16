@@ -47,7 +47,7 @@ Run:     <ISO 8601>          Run id: <AAAAMMDD-HHMMSS>
 Stack:   <linguagem> + <framework> <versão> (confiança: <alta|média|baixa>)
 Files:   <n> analyzed | ~<loc> lines of code
 Architecture: <rótulo>
-Skill:   refactor-arch 1.1 | Catalog 1.0
+Skill:   refactor-arch 1.2 | Catalog 1.2
 Evidence: reports/evidence/project-{N}/<Run id>/
 
 ## Summary
@@ -91,20 +91,22 @@ Recommendation: <o que fazer> (Playbook <P-xx>)
 (ou "Nenhum")
 
 ## Correções que exigem mudança de contrato
-(Cada correção do plano é classificada **compatível** — não altera o contrato — ou **exige contrato** — altera rota, status, formato ou acesso. Só as que exigem contrato entram aqui; a P3 da rodada de perguntas decide entre **Opção 1: manter o contrato** e **Opção 2: atualizar**, ver `07-politica-comandos-aprovacoes.md`.)
+(Cada correção do plano é classificada **compatível** — não altera o contrato — ou **exige contrato** — altera rota, status, formato ou acesso. Só as que exigem contrato entram aqui; a P3 da rodada de perguntas decide entre **Refatorar** (recomendado), **Manter contrato\*** e **Híbrido**, ver `07-politica-comandos-aprovacoes.md`, seção 4.1.)
 
-| ID | Rota/campo | Mudança | Sev. | Motivo (Finding) | Impacto para clientes | Resolvido na Opção 1? | Prova prevista na Opção 2 |
-|---|---|---|---|---|---|---|---|
-| CT-01 | <POST /admin/x> | <remover|exigir autenticação|omitir campo> | <CRITICAL> | <F-001> | <o que o cliente precisa mudar ou deixa de receber> | <sim (valor neutralizado, chave mantida) \| parcial \| não (fica residual)> | <teste novo \| sondagem ad hoc \| não comprovável> |
+| ID | Rota/campo | Mudança | Sev. | Motivo (Finding) | Impacto para clientes | Refatorar | Manter contrato\* | Híbrido | Prova prevista |
+|---|---|---|---|---|---|---|---|---|---|
+| CT-01 | <POST /admin/x> | <remover|exigir autenticação|omitir campo> | <CRITICAL> | <F-001> | <o que o cliente precisa mudar ou deixa de receber> | aplica | <sim (valor neutralizado, chave mantida) \| parcial \| não (fica sem correção)> | <aplica — variante mínima (CRITICAL/HIGH) \| não aplica (MEDIUM/LOW)> | <teste novo (unidade/integração) + execução local autenticada \| não comprovável> |
+
+("parcial" em CRITICAL/HIGH conta como sem correção no resumo abaixo e na segunda confirmação.)
 (ou "Nenhuma")
 
-Resumo para a pergunta: <n> correções exigem contrato; na Opção 1 ficam residuais <a> CRITICAL e <b> HIGH.
+Resumo para a pergunta: <n> correções exigem contrato. Refatorar: corrige todas. Manter contrato\*: ficam sem correção <a> CRITICAL e <b> HIGH<, exige segunda confirmação | ; nenhum CRITICAL/HIGH fica sem correção>. Híbrido: aplica <c> (CRITICAL/HIGH); ficam sem correção <d> MEDIUM/LOW.
 
 ## Testes afetados
 | Teste | Motivo (C-xx/CT-xx) | Classe (T1/T2/T4) | Ajuste previsto |
 |---|---|---|---|
 | <arquivo::teste> | <módulo movido \| autenticação \| seed \| campo alterado> | <T1> | <ex.: login do admin e cabeçalho Authorization> |
-(ou "Nenhum"; T4 = teste novo, só na Opção 2; ver `06-protocolo-validacao.md`, seção 8)
+(ou "Nenhum"; T4 = teste novo de prova — `CT-xx` aplicado ou correção CRITICAL/HIGH, unidade ou integração; ver `06-protocolo-validacao.md`, seção 8)
 
 ## Plano de mudanças
 | ID | Mudança | Sev. | Resolve | Arquivos | Padrão | Afeta contrato | Depende de |
@@ -150,10 +152,10 @@ Seções, nesta ordem:
 
 ````markdown
 ## Decisões do usuário (registro)
-- Escopo: <todas | rejeitadas: C-xx, C-yy>
+- Escopo: <todas | rejeitadas: C-xx, C-yy (se houver CRITICAL/HIGH rejeitado: segunda confirmação "<texto literal>")>
 - Modo de comandos: <Equilibrado|Completo|Passo a passo|Sem alterar ambiente>
-- Contrato: <Opção 1 — manter o contrato | Opção 2 — atualizar (CT-xx aplicados)>
-- Sondagem ad hoc: <somente leitura|incluindo escrita|não|não aplicável>
+- Contrato: <Refatorar (CT-xx aplicados) | Híbrido (aplicados: CT-xx; mantidos: CT-yy) | Manter contrato\* (segunda confirmação: "<texto literal>"; sem correção: F-xxx)>
+- Execução local autenticada (P4): <incluindo escrita|somente leitura|não|não aplicável (não é serviço HTTP)>
 
 ## Estrutura DEPOIS
 <árvore>
@@ -177,15 +179,15 @@ Seções, nesta ordem:
 | C-01 | aplicada / rejeitada pelo usuário / revertida / não aplicável | <detalhe> |
 
 ## Contratos — resultado
-**Opção 1 (manter o contrato):** escreva "Contrato preservado: rotas, métodos, status e formato das respostas inalterados" e liste os **residuais por contrato**:
+**Manter contrato\*:** escreva "Contrato preservado: rotas, métodos, status e formato das respostas inalterados; mudanças de resultado por correção compatível listadas como `ALTERADO (correção F-xxx, sem contrato)`" e liste os **residuais por contrato** (CRITICAL/HIGH em destaque, com a segunda confirmação do usuário):
 
-| Finding | Severidade | O que ficou sem corrigir | O que exigiria (Opção 2) |
+| Finding | Severidade | O que ficou sem corrigir | O que exigiria (Refatorar/Híbrido) |
 |---|---|---|---|
 | <F-003> | <CRITICAL> | <rota administrativa sem autenticação> | <exigir credencial + testes que comprovem> |
 
 Ajustes de conteúdo sem mudança de formato (ex.: chave mantida com valor neutralizado) entram em "Mudanças aplicadas", com o motivo.
 
-**Opção 2 (atualizar):** uma linha por contrato aplicado.
+**Refatorar / Híbrido:** uma linha por contrato aplicado. No Híbrido, acrescente abaixo a tabela de residuais por contrato (só MEDIUM/LOW) no formato acima.
 
 | CT | Rota/campo | Antes → Depois | Por que (F-xxx, CWE/OWASP) | Impacto e como adaptar o cliente | Prova (E-nn) |
 |---|---|---|---|---|---|
@@ -199,28 +201,36 @@ Ajustes de conteúdo sem mudança de formato (ex.: chave mantida com valor neutr
 | <arquivo::teste> | <C-xx/CT-xx> | <T1/T2> | <diff curto> | <mantidas \| reforçadas> | <E-nn> | `tests-before/<caminho>` |
 (ou "Nenhuma")
 
-## Testes adicionados (Opção 2)
-| Teste | CT/F | O que comprova | Verde (código refatorado) | Vermelho (checkpoint original) |
-|---|---|---|---|---|
-| <arquivo::teste> | <CT-01> | <sem token ⇒ 401; com token ⇒ 200> | <E-nn> | <E-nn \| sensibilidade não verificada: motivo> |
-(ou "Não aplicável (Opção 1)")
+## Testes adicionados (provas)
+| Teste | Tipo | CT/F | O que comprova | Verde (código refatorado) | Vermelho (checkpoint original) |
+|---|---|---|---|---|---|
+| <arquivo::teste> | <unidade \| integração> | <CT-01 / F-003> | <sem token ⇒ 401; com token ⇒ 200> | <E-nn> | <E-nn \| sensibilidade não verificada: motivo> |
+(ou "Nenhum", com o motivo)
 
 ## Evidências de execução
 (`E-00` — Fase 1 — foi gravado na Fase 2; ver `06-protocolo-validacao.md`, seção 7.)
 <um bloco E-nn por execução; formato em 06-protocolo-validacao.md, seção 7>
+
+### Execução local autenticada (V4)
+Credenciais: <geradas pela aplicação: mecanismo (ex.: SEED_* aleatórias por execução + POST /login)>; valores mascarados. Integrações: <provedor mock ativado por configuração de teste | nenhuma>. Banco: <descartável: memória | arquivo temporário | cópia fora do projeto>.
+
+| Método | Rota | Credencial | ANTES (status) | DEPOIS (status) | Resultado | Prova |
+|---|---|---|---|---|---|---|
+| <GET> | </relatorios/vendas> | <sem \| inválida \| admin \| cliente> | <200> | <401> | <ALTERADO (aprovado CT-03) \| igual \| DIVERGENTE> | <E-nn baseline, E-nn final> |
+(ou "NÃO EXECUTADA (motivo)")
 
 ### Comparação antes/depois (rotas)
 | Método | Rota | ANTES | DEPOIS | Resultado | Prova |
 |---|---|---|---|---|---|
 | GET | /x | 200 {chaves} | 200 {chaves} | igual | E-02, E-05 |
 | POST | /admin/x | 200 | removida (CT-01 aprovada) | ALTERADO (aprovado) | E-07 |
-(status possíveis: igual, ALTERADO (aprovado), DIVERGENTE, NÃO EXERCITADA (motivo))
+(status possíveis: igual, ALTERADO (aprovado), ALTERADO (correção F-xxx, sem contrato), DIVERGENTE, NÃO EXERCITADA (motivo))
 
 ### Resumo da validação
 | Degrau | Comando | Resultado | Evidência |
 |---|---|---|---|
 | V1 | `<comando>` | passed 41 / failed 0 / skipped 0 | E-02 |
-Veredito: <VALIDADO (V1) | VALIDADO PARCIALMENTE (...) | NÃO VALIDADO (motivo)>
+Veredito: <VALIDADO (V1) | VALIDADO (V1+V4) | VALIDADO PARCIALMENTE (...) | NÃO VALIDADO (motivo)> <+ sufixo "COM RESSALVAS DE SEGURANÇA (F-xxx)" se houver CRITICAL/HIGH sem correção confirmado> <+ "(V4 não executada)" se P4 = Não>
 
 ## Checklist de Validação
 (Cada item recebe [x], [~] ou [ ] e uma referência. [x] exige critério plenamente atendido e evidência real E-nn ou arquivo:linha; [~] parcial cita o finding residual F-xxx; sem evidência fica [ ] com o motivo. Itens da Fase 1 citam `E-00`.)
@@ -248,10 +258,12 @@ Veredito: <VALIDADO (V1) | VALIDADO PARCIALMENTE (...) | NÃO VALIDADO (motivo)>
 - [ ] Error handling centralizado — <evidência>
 - [ ] Entry point claro — <evidência>
 - [ ] Aplicação inicia sem erros — <E-nn>
-- [ ] Endpoints originais respondem corretamente — <X de Y rotas iguais; N alteradas por contrato aprovado (CT-xx) com prova E-nn; Opção 1 ⇒ N = 0>
+- [ ] Endpoints originais respondem corretamente — <X de Y rotas iguais; N alteradas por contrato aprovado (CT-xx) com prova E-nn; Manter contrato\* ⇒ N = 0>
 
 ## Itens residuais (reauditoria)
-<findings que continuam presentes, com o motivo (rejeitado pelo usuário, risco de contrato, fora de escopo) ou "Nenhum">
+CRITICAL/HIGH sem correção: <"Nenhum" | lista F-xxx com a segunda confirmação do usuário (texto literal)>
+Corrigidos no código com ação manual pendente: <ex.: F-001 — rotacionar segredo publicado no histórico git | "Nenhum">
+<demais findings que continuam presentes (MEDIUM/LOW), com o motivo (rejeitado pelo usuário, risco de contrato, fora de escopo) ou "Nenhum">
 
 ## Observações da execução
 - Stack detectada e confiança: <...>
@@ -276,17 +288,19 @@ PHASE 3: REFACTORING COMPLETE
   <✓|✗|~> Application boots without errors            [E-nn]
   <✓|✗|~> Original endpoints respond correctly        [E-nn]   (exceções aprovadas: <lista>)
   <✓|✗|~> Existing tests pass (<passed>/<total>)      [E-nn]
+  <✓|✗|~> No CRITICAL/HIGH left open                  [reauditoria: <n> CRITICAL/HIGH residuais]
+  <✓|✗|~> Authenticated local run                     [E-nn baseline, E-nn final | NÃO EXECUTADA (motivo)]
   <✓|✗|~> No anti-patterns remaining                  [reauditoria: <n> residuais]
 
-Contract: <preservado (Opção 1) | n alterados e comprovados (Opção 2: E-nn…)>
-Tests:    adjusted <n> (T1 <a> / T2 <b>) · added <n> (T4) — ver "Alterações em testes"
+Contract: <preservado (Manter contrato*) | n alterados e comprovados (Refatorar | Híbrido: E-nn…)>
+Tests:    adjusted <n> (T1 <a> / T2 <b>) · added <n> (T4: unidade <u> / integração <i>) — ver "Alterações em testes"
 
-Veredito: <VALIDADO (V1) | VALIDADO PARCIALMENTE | NÃO VALIDADO>
+Veredito: <VALIDADO (V1) | VALIDADO (V1+V4) | VALIDADO PARCIALMENTE | NÃO VALIDADO> <+ "COM RESSALVAS DE SEGURANÇA (F-xxx)"> <+ "(V4 não executada)">
 Relatório: <caminho> | Evidências: <pasta>
 ================================
 ```
 
-Símbolos: `✓` somente com evidência `E-nn` real; `✗` falhou; `~` parcial/não exercitado (explique abaixo). **Nunca** marque `✓` em "No anti-patterns remaining" sem ter reexecutado a varredura do catálogo.
+Símbolos: `✓` somente com evidência `E-nn` real; `✗` falhou; `~` parcial/não exercitado (explique abaixo). Em "No CRITICAL/HIGH left open", residual confirmado pelo usuário é `✗ (residual confirmado: F-xxx)`. **Nunca** marque `✓` em "No anti-patterns remaining" sem ter reexecutado a varredura do catálogo.
 
 ## 6. Exemplo mínimo (stack fictícia) — só como molde de formato
 
@@ -300,7 +314,7 @@ Run:     2026-11-04T14:32:10-03:00          Run id: 20261104-143210
 Stack:   Ruby + Sinatra 4.0 (confiança: média)
 Files:   3 analyzed | ~210 lines of code
 Architecture: monolito-sem-camadas
-Skill:   refactor-arch 1.1 | Catalog 1.0
+Skill:   refactor-arch 1.2 | Catalog 1.2
 
 ## Summary
 CRITICAL: 1 | HIGH: 1 | MEDIUM: 1 | LOW: 1
