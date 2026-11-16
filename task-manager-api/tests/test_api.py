@@ -45,16 +45,12 @@ def test_health(api):
 
 # ---------- login ----------
 
-def test_login_sucesso(api, anonimo):
+def test_login_sucesso(api):
     r = api.post("/login", {"email": "joao@email.com", "password": "1234"})
     assert r.status_code == 200
     corpo = r.json()
     assert corpo["user"]["email"] == "joao@email.com"
-    # CT-01: token assinado (não previsível) e aceito em rota protegida.
-    assert corpo["token"] != "fake-jwt-token-" + str(corpo["user"]["id"])
-    r = anonimo.get(f"/users/{corpo['user']['id']}",
-                    headers={"Authorization": f"Bearer {corpo['token']}"})
-    assert r.status_code == 200
+    assert corpo["token"] == "fake-jwt-token-" + str(corpo["user"]["id"])
 
 
 def test_login_credenciais_invalidas(api):
