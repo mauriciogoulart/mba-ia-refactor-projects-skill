@@ -63,7 +63,7 @@ Decisões do usuário para a v2:
 | 3.1 | P1 code-smells-project — Fases 1 e 2 (pausa) | ✅ | Run id 20261116-195523; 31 findings (9 C / 6 H / 10 M / 6 L); P3 com 3 opções e asterisco "3 CRITICAL e 0 HIGH ficarão sem correção" |
 | 3.2 | P1 — respostas e Fase 3 | ✅ | respostas `1A 2A 3A 4A`; na Fase 3: lote C `1A` (checkpoint + worktree temporária) e design de autenticação `2A` (token assinado no `/login`). Veredito VALIDADO (V1+V4); 0 CRITICAL/HIGH residuais; testes 23 → 51 (28 de prova: 9 unidade, 19 integração, todos vermelhos no original); execução local autenticada com 52 requisições (E-03 × E-07) |
 | 3.3 | P1 — commit | ✅ | ver registro |
-| 3.4 | P1 — validação independente (subagente) | 🔄 | |
+| 3.4 | P1 — validação independente (subagente) | ✅ | APROVADO com ressalvas não bloqueantes ([validação](validacoes/validacao-project-1_2026-11-16_v3.md)): 51 passed reexecutado; 28 provas vermelhas no original; app subida com credenciais geradas (401 sem token, 200 com token, `/admin/query` 404); 31 referências de linha conferidas. Ressalvas: `Infinity`/`NaN` em `POST /produtos` ⇒ 500; README do projeto não atualizado; fragmentos de segredo antigo em E-08 (saída de assert, mantida sem edição para preservar a evidência bruta); cabeçalho E-nn incompleto em E-03/E-06/E-07 |
 | 3.5 | P2 ecommerce-api-legacy — Fases 1 e 2 (pausa) | 🔄 | executor: subagente sem contexto prévio |
 | 3.6 | P2 — respostas e Fase 3 | ⏳ | |
 | 3.7 | P2 — commit | ⏳ | |
