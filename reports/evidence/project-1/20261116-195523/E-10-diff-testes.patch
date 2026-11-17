@@ -1,0 +1,734 @@
+# Diff unificado dos testes (segredos do original mascarados: 4 caracteres + ***)
+diff --git a/code-smells-project/tests/conftest.py b/code-smells-project/tests/conftest.py
+index 6b76bc7..23ac00c 100644
+--- a/code-smells-project/tests/conftest.py
++++ b/code-smells-project/tests/conftest.py
+@@ -5,6 +5,7 @@ A aplicação é copiada para um diretório temporário e iniciada com
+ Os testes dependem apenas do contrato HTTP, não da estrutura interna do código.
+ """
+ import os
++import secrets
+ import shutil
+ import signal
+ import socket
+@@ -64,18 +65,52 @@ class Cliente:
+ 
+ 
+ @pytest.fixture(scope="session")
+-def api(tmp_path_factory):
++def credenciais():
++    """Senhas de seed aleatórias por execução, lidas pela aplicação via ambiente."""
++    return {"admin": secrets.token_urlsafe(12), "cliente": secrets.token_urlsafe(12)}
++
++
++@pytest.fixture(scope="session")
++def ambiente_app(tmp_path_factory):
++    raiz = tmp_path_factory.mktemp("app")
++    return {"raiz": raiz, "destino": raiz / "projeto", "log": raiz / "servidor.log",
++            "banco": raiz / "projeto" / "loja.db"}
++
++
++@pytest.fixture(scope="session")
++def caminho_banco(api, ambiente_app):
++    return ambiente_app["banco"]
++
++
++@pytest.fixture(scope="session")
++def log_servidor(api, ambiente_app):
++    return ambiente_app["log"]
++
++
++@pytest.fixture(scope="session")
++def admin_headers(api, credenciais):
++    """Cabeçalho Authorization do admin de seed (token emitido pelo POST /login)."""
++    r = api.post("/login", {"email": "admin@loja.com", "senha": credenciais["admin"]})
++    token = r.json().get("dados", {}).get("token", "") if r.status_code == 200 else ""
++    return {"Authorization": f"Bearer {token}"}
++
++
++@pytest.fixture(scope="session")
++def api(ambiente_app, credenciais):
+     if _porta_em_uso(PORTA):
+         pytest.exit(f"Porta {PORTA} já está em uso; encerre o processo e rode novamente.",
+                     returncode=2)
+ 
+-    raiz = tmp_path_factory.mktemp("app")
+-    destino = raiz / "projeto"
++    destino = ambiente_app["destino"]
+     shutil.copytree(DIR_PROJETO, destino, ignore=IGNORAR)
+ 
+-    caminho_log = raiz / "servidor.log"
++    caminho_log = ambiente_app["log"]
+     log = caminho_log.open("w", encoding="utf-8")
+-    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
++    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1",
++           "SECRET_KEY": secrets.token_hex(32),
++           "SEED_ADMIN_PASSWORD": credenciais["admin"],
++           "SEED_CLIENTE_PASSWORD": credenciais["cliente"],
++           "DB_PATH": str(ambiente_app["banco"])}
+     proc = subprocess.Popen(
+         [sys.executable, "app.py"], cwd=destino, env=env,
+         stdout=log, stderr=subprocess.STDOUT,
+diff --git a/code-smells-project/tests/test_api.py b/code-smells-project/tests/test_api.py
+index 1f616c9..73c8249 100644
+--- a/code-smells-project/tests/test_api.py
++++ b/code-smells-project/tests/test_api.py
+@@ -11,21 +11,23 @@ def _sufixo():
+     return uuid.uuid4().hex[:8]
+ 
+ 
+-def _criar_produto(api, preco=10.0, estoque=5, categoria="geral"):
++def _criar_produto(api, admin_headers, preco=10.0, estoque=5, categoria="geral"):
+     r = api.post("/produtos", {
+         "nome": "Produto" + _sufixo(), "descricao": "teste",
+         "preco": preco, "estoque": estoque, "categoria": categoria,
+-    })
++    }, headers=admin_headers)
+     assert r.status_code == 201, r.text
+     return r.json()["dados"]["id"]
+ 
+ 
+-def _criar_usuario(api):
+-    r = api.post("/usuarios", {
+-        "nome": "Usuario" + _sufixo(), "email": f"u{_sufixo()}@teste.com", "senha": "segredo1",
+-    })
++def _criar_usuario_com_token(api):
++    """Cadastro público + login do próprio usuário (CT-05/CT-06/CT-07)."""
++    email, senha = f"u{_sufixo()}@teste.com", "segredo1"
++    r = api.post("/usuarios", {"nome": "Usuario" + _sufixo(), "email": email, "senha": senha})
+     assert r.status_code == 201, r.text
+-    return r.json()["dados"]["id"]
++    uid = r.json()["dados"]["id"]
++    token = api.post("/login", {"email": email, "senha": senha}).json()["dados"]["token"]
++    return uid, {"Authorization": f"Bearer {token}"}
+ 
+ 
+ # ---------- raiz / health ----------
+@@ -88,8 +90,8 @@ def test_busca_produtos_por_categoria_e_preco(api):
+     assert all(p["categoria"] == "moveis" and p["preco"] <= 5000 for p in corpo["dados"])
+ 
+ 
+-def test_crud_produto(api):
+-    pid = _criar_produto(api, preco=25.5, estoque=3, categoria="livros")
++def test_crud_produto(api, admin_headers):
++    pid = _criar_produto(api, admin_headers, preco=25.5, estoque=3, categoria="livros")
+ 
+     r = api.get(f"/produtos/{pid}")
+     assert r.status_code == 200
+@@ -98,23 +100,23 @@ def test_crud_produto(api):
+     r = api.put(f"/produtos/{pid}", {
+         "nome": "Produto Atualizado", "descricao": "novo", "preco": 30, "estoque": 7,
+         "categoria": "livros",
+-    })
++    }, headers=admin_headers)
+     assert r.status_code == 200
+     dados = api.get(f"/produtos/{pid}").json()["dados"]
+     assert dados["nome"] == "Produto Atualizado"
+     assert dados["estoque"] == 7
+ 
+-    assert api.delete(f"/produtos/{pid}").status_code == 200
++    assert api.delete(f"/produtos/{pid}", headers=admin_headers).status_code == 200
+     assert api.get(f"/produtos/{pid}").status_code == 404
+ 
+ 
+-def test_atualizar_e_deletar_produto_inexistente(api):
++def test_atualizar_e_deletar_produto_inexistente(api, admin_headers):
+     corpo = {"nome": "Algum", "preco": 1, "estoque": 1}
+-    assert api.put("/produtos/999999", corpo).status_code == 404
+-    assert api.delete("/produtos/999999").status_code == 404
++    assert api.put("/produtos/999999", corpo, headers=admin_headers).status_code == 404
++    assert api.delete("/produtos/999999", headers=admin_headers).status_code == 404
+ 
+ 
+-def test_criar_produto_validacoes(api):
++def test_criar_produto_validacoes(api, admin_headers):
+     base = {"nome": "Valido", "preco": 10, "estoque": 1, "categoria": "geral"}
+     casos = [
+         ({k: v for k, v in base.items() if k != "nome"}, "nome ausente"),
+@@ -126,15 +128,15 @@ def test_criar_produto_validacoes(api):
+         ({**base, "categoria": "inexistente"}, "categoria inválida"),
+     ]
+     for payload, descricao in casos:
+-        r = api.post("/produtos", payload)
++        r = api.post("/produtos", payload, headers=admin_headers)
+         assert r.status_code == 400, descricao
+         assert "erro" in r.json(), descricao
+ 
+ 
+ # ---------- usuários / login ----------
+ 
+-def test_listar_usuarios_seed(api):
+-    r = api.get("/usuarios")
++def test_listar_usuarios_seed(api, admin_headers):
++    r = api.get("/usuarios", headers=admin_headers)
+     assert r.status_code == 200
+     corpo = r.json()
+     assert corpo["sucesso"] is True
+@@ -142,16 +144,16 @@ def test_listar_usuarios_seed(api):
+     assert "admin@loja.com" in emails
+ 
+ 
+-def test_buscar_usuario(api):
+-    r = api.get("/usuarios/1")
++def test_buscar_usuario(api, admin_headers):
++    r = api.get("/usuarios/1", headers=admin_headers)
+     assert r.status_code == 200
+     assert r.json()["dados"]["email"] == "admin@loja.com"
+-    assert api.get("/usuarios/999999").status_code == 404
++    assert api.get("/usuarios/999999", headers=admin_headers).status_code == 404
+ 
+ 
+ def test_criar_usuario(api):
+-    uid = _criar_usuario(api)
+-    r = api.get(f"/usuarios/{uid}")
++    uid, headers = _criar_usuario_com_token(api)
++    r = api.get(f"/usuarios/{uid}", headers=headers)
+     assert r.status_code == 200
+     assert r.json()["dados"]["id"] == uid
+ 
+@@ -161,8 +163,8 @@ def test_criar_usuario_campos_obrigatorios(api):
+     assert r.status_code == 400
+ 
+ 
+-def test_login_sucesso(api):
+-    r = api.post("/login", {"email": "admin@loja.com", "senha": "admi***"})
++def test_login_sucesso(api, credenciais):
++    r = api.post("/login", {"email": "admin@loja.com", "senha": credenciais["admin"]})
+     assert r.status_code == 200
+     corpo = r.json()
+     assert corpo["sucesso"] is True
+@@ -181,11 +183,12 @@ def test_login_campos_obrigatorios(api):
+ 
+ # ---------- pedidos ----------
+ 
+-def test_criar_pedido_calcula_total_e_baixa_estoque(api):
+-    pid = _criar_produto(api, preco=10.0, estoque=5)
+-    uid = _criar_usuario(api)
++def test_criar_pedido_calcula_total_e_baixa_estoque(api, admin_headers):
++    pid = _criar_produto(api, admin_headers, preco=10.0, estoque=5)
++    uid, headers = _criar_usuario_com_token(api)
+ 
+-    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": pid, "quantidade": 2}]})
++    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": pid, "quantidade": 2}]},
++                 headers=headers)
+     assert r.status_code == 201
+     corpo = r.json()
+     assert corpo["sucesso"] is True
+@@ -194,51 +197,56 @@ def test_criar_pedido_calcula_total_e_baixa_estoque(api):
+ 
+     assert api.get(f"/produtos/{pid}").json()["dados"]["estoque"] == 3
+ 
+-    pedidos_usuario = api.get(f"/pedidos/usuario/{uid}").json()["dados"]
++    pedidos_usuario = api.get(f"/pedidos/usuario/{uid}", headers=headers).json()["dados"]
+     assert any(p["id"] == pedido_id for p in pedidos_usuario)
+ 
+-    todos = api.get("/pedidos").json()["dados"]
++    todos = api.get("/pedidos", headers=admin_headers).json()["dados"]
+     assert any(p["id"] == pedido_id for p in todos)
+ 
+ 
+-def test_criar_pedido_estoque_insuficiente(api):
+-    pid = _criar_produto(api, estoque=1)
+-    uid = _criar_usuario(api)
+-    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": pid, "quantidade": 5}]})
++def test_criar_pedido_estoque_insuficiente(api, admin_headers):
++    pid = _criar_produto(api, admin_headers, estoque=1)
++    uid, headers = _criar_usuario_com_token(api)
++    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": pid, "quantidade": 5}]},
++                 headers=headers)
+     assert r.status_code == 400
+     assert r.json()["sucesso"] is False
+     assert api.get(f"/produtos/{pid}").json()["dados"]["estoque"] == 1
+ 
+ 
+ def test_criar_pedido_produto_inexistente(api):
+-    uid = _criar_usuario(api)
+-    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": 999999, "quantidade": 1}]})
++    uid, headers = _criar_usuario_com_token(api)
++    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": 999999, "quantidade": 1}]},
++                 headers=headers)
+     assert r.status_code == 400
+ 
+ 
+-def test_criar_pedido_validacoes(api):
+-    assert api.post("/pedidos", {"itens": [{"produto_id": 1, "quantidade": 1}]}).status_code == 400
+-    assert api.post("/pedidos", {"usuario_id": 1, "itens": []}).status_code == 400
++def test_criar_pedido_validacoes(api, admin_headers):
++    assert api.post("/pedidos", {"itens": [{"produto_id": 1, "quantidade": 1}]},
++                    headers=admin_headers).status_code == 400
++    assert api.post("/pedidos", {"usuario_id": 1, "itens": []}, headers=admin_headers).status_code == 400
+ 
+ 
+-def test_atualizar_status_pedido(api):
+-    pid = _criar_produto(api, estoque=5)
+-    uid = _criar_usuario(api)
++def test_atualizar_status_pedido(api, admin_headers):
++    pid = _criar_produto(api, admin_headers, estoque=5)
++    uid, headers = _criar_usuario_com_token(api)
+     pedido_id = api.post("/pedidos", {
+         "usuario_id": uid, "itens": [{"produto_id": pid, "quantidade": 1}],
+-    }).json()["dados"]["pedido_id"]
++    }, headers=headers).json()["dados"]["pedido_id"]
+ 
+-    assert api.put(f"/pedidos/{pedido_id}/status", {"status": "aprovado"}).status_code == 200
+-    pedidos = api.get(f"/pedidos/usuario/{uid}").json()["dados"]
++    assert api.put(f"/pedidos/{pedido_id}/status", {"status": "aprovado"},
++                   headers=admin_headers).status_code == 200
++    pedidos = api.get(f"/pedidos/usuario/{uid}", headers=headers).json()["dados"]
+     assert next(p for p in pedidos if p["id"] == pedido_id)["status"] == "aprovado"
+ 
+-    assert api.put(f"/pedidos/{pedido_id}/status", {"status": "invalido"}).status_code == 400
++    assert api.put(f"/pedidos/{pedido_id}/status", {"status": "invalido"},
++                   headers=admin_headers).status_code == 400
+ 
+ 
+ # ---------- relatório ----------
+ 
+-def test_relatorio_vendas(api):
+-    r = api.get("/relatorios/vendas")
++def test_relatorio_vendas(api, admin_headers):
++    r = api.get("/relatorios/vendas", headers=admin_headers)
+     assert r.status_code == 200
+     dados = r.json()["dados"]
+     for chave in ("total_pedidos", "faturamento_bruto", "desconto_aplicavel",
+diff --git a/code-smells-project/tests/test_seguranca.py b/code-smells-project/tests/test_seguranca.py
+new file mode 100644
+index 0000000..59e061e
+--- /dev/null
++++ b/code-smells-project/tests/test_seguranca.py
+@@ -0,0 +1,238 @@
++"""Testes de prova (integração, via HTTP) das correções de segurança e dos contratos aprovados.
++
++Cada teste cita o CT-xx/F-xxx do relatório reports/audit-project-1.md que comprova.
++"""
++import sqlite3
++import uuid
++
++import pytest
++
++SEM = {}
++INVALIDO = {"Authorization": "Bearer token-invalido"}
++
++
++def _sufixo():
++    return uuid.uuid4().hex[:8]
++
++
++@pytest.fixture
++def cliente(api):
++    """Cliente criado pelo cadastro público e autenticado pelo próprio login."""
++    email, senha = f"c{_sufixo()}@teste.com", "segredo-" + _sufixo()
++    r = api.post("/usuarios", {"nome": "Cliente Prova", "email": email, "senha": senha})
++    assert r.status_code == 201, r.text
++    uid = r.json()["dados"]["id"]
++    login = api.post("/login", {"email": email, "senha": senha})
++    token = login.json().get("dados", {}).get("token", "") if login.status_code == 200 else ""
++    return {"id": uid, "email": email, "senha": senha, "headers": {"Authorization": f"Bearer {token}"}}
++
++
++def _produto(api, admin_headers, estoque=5, preco=10.0, nome=None):
++    r = api.post("/produtos", {"nome": nome or "Prova" + _sufixo(), "descricao": "x", "preco": preco,
++                               "estoque": estoque, "categoria": "geral"}, headers=admin_headers)
++    assert r.status_code == 201, r.text
++    return r.json()["dados"]["id"]
++
++
++# ---------- CT-01 / F-005: execução de SQL removida ----------
++
++def test_ct01_admin_query_removida(api, admin_headers):
++    for headers in (SEM, admin_headers):
++        r = api.post("/admin/query", {"sql": "SELECT 1 AS x"}, headers=headers)
++        assert r.status_code in (404, 405)
++
++
++# ---------- CT-02 / F-004: reset exige admin (positivo só na execução local V4, banco descartável) ----------
++
++def test_ct02_reset_db_exige_admin(api, cliente):
++    assert api.post("/admin/reset-db", headers=SEM).status_code == 401
++    assert api.post("/admin/reset-db", headers=INVALIDO).status_code == 401
++    assert api.post("/admin/reset-db", headers=cliente["headers"]).status_code == 403
++    assert api.get("/health").json()["counts"]["produtos"] >= 10  # nada foi apagado
++
++
++# ---------- CT-03 / F-004: relatório financeiro exige admin ----------
++
++def test_ct03_relatorio_exige_admin(api, admin_headers, cliente):
++    assert api.get("/relatorios/vendas", headers=SEM).status_code == 401
++    assert api.get("/relatorios/vendas", headers=INVALIDO).status_code == 401
++    assert api.get("/relatorios/vendas", headers=cliente["headers"]).status_code == 403
++    assert api.get("/relatorios/vendas", headers=admin_headers).status_code == 200
++
++
++# ---------- CT-04 / F-003: escrita de produtos exige admin; leitura segue pública ----------
++
++def test_ct04_escrita_de_produtos_exige_admin(api, admin_headers, cliente):
++    corpo = {"nome": "Bloqueado", "preco": 1, "estoque": 1}
++    assert api.post("/produtos", corpo, headers=SEM).status_code == 401
++    assert api.post("/produtos", corpo, headers=cliente["headers"]).status_code == 403
++    pid = _produto(api, admin_headers)
++    assert api.put(f"/produtos/{pid}", corpo, headers=SEM).status_code == 401
++    assert api.put(f"/produtos/{pid}", corpo, headers=cliente["headers"]).status_code == 403
++    assert api.delete(f"/produtos/{pid}", headers=SEM).status_code == 401
++    assert api.delete(f"/produtos/{pid}", headers=cliente["headers"]).status_code == 403
++    assert api.get(f"/produtos/{pid}").status_code == 200
++    assert api.get("/produtos").status_code == 200
++
++
++# ---------- CT-05 / F-003: usuários exigem token (lista: admin; por id: próprio ou admin) ----------
++
++def test_ct05_usuarios_exigem_token(api, admin_headers, cliente):
++    assert api.get("/usuarios", headers=SEM).status_code == 401
++    assert api.get("/usuarios", headers=cliente["headers"]).status_code == 403
++    assert api.get(f"/usuarios/{cliente['id']}", headers=SEM).status_code == 401
++    assert api.get("/usuarios/1", headers=cliente["headers"]).status_code == 403
++    assert api.get(f"/usuarios/{cliente['id']}", headers=cliente["headers"]).status_code == 200
++    assert api.get(f"/usuarios/{cliente['id']}", headers=admin_headers).status_code == 200
++
++
++# ---------- CT-06 / F-003: pedidos exigem token e propriedade ----------
++
++def test_ct06_pedidos_exigem_token_e_propriedade(api, admin_headers, cliente):
++    pid = _produto(api, admin_headers)
++    proprio = {"usuario_id": cliente["id"], "itens": [{"produto_id": pid, "quantidade": 1}]}
++    alheio = {"usuario_id": 1, "itens": [{"produto_id": pid, "quantidade": 1}]}
++    assert api.post("/pedidos", proprio, headers=SEM).status_code == 401
++    assert api.post("/pedidos", alheio, headers=cliente["headers"]).status_code == 403
++    r = api.post("/pedidos", proprio, headers=cliente["headers"])
++    assert r.status_code == 201
++    pedido_id = r.json()["dados"]["pedido_id"]
++
++    assert api.get("/pedidos", headers=SEM).status_code == 401
++    assert api.get("/pedidos", headers=cliente["headers"]).status_code == 403
++    assert api.get(f"/pedidos/usuario/{cliente['id']}", headers=SEM).status_code == 401
++    assert api.get("/pedidos/usuario/1", headers=cliente["headers"]).status_code == 403
++    assert api.get(f"/pedidos/usuario/{cliente['id']}", headers=cliente["headers"]).status_code == 200
++
++    status = {"status": "aprovado"}
++    assert api.put(f"/pedidos/{pedido_id}/status", status, headers=SEM).status_code == 401
++    assert api.put(f"/pedidos/{pedido_id}/status", status, headers=cliente["headers"]).status_code == 403
++    assert api.put(f"/pedidos/{pedido_id}/status", status, headers=admin_headers).status_code == 200
++
++
++# ---------- CT-07 / F-003: login emite token verificável ----------
++
++def test_ct07_login_emite_token_que_autentica(api, cliente):
++    r = api.post("/login", {"email": cliente["email"], "senha": cliente["senha"]})
++    assert r.status_code == 200
++    token = r.json()["dados"].get("token")
++    assert isinstance(token, str) and token
++    assert api.get(f"/usuarios/{cliente['id']}",
++                   headers={"Authorization": f"Bearer {token}"}).status_code == 200
++    assert api.get(f"/usuarios/{cliente['id']}",
++                   headers={"Authorization": f"Bearer {token}x"}).status_code == 401
++
++
++# ---------- CT-08 / CT-09 / F-006: sem senha nem configuração nas respostas ----------
++
++def test_ct08_usuarios_sem_campo_senha(api, admin_headers, cliente):
++    lista = api.get("/usuarios", headers=admin_headers).json()["dados"]
++    assert lista and all("senha" not in u for u in lista)
++    proprio = api.get(f"/usuarios/{cliente['id']}", headers=cliente["headers"]).json()["dados"]
++    assert "senha" not in proprio
++    assert proprio["email"] == cliente["email"]
++
++
++def test_ct09_health_sem_segredos(api):
++    corpo = api.get("/health").json()
++    for chave in ("secret_key", "db_path", "debug"):
++        assert chave not in corpo
++    assert corpo["status"] == "ok" and corpo["database"] == "connected" and "counts" in corpo
++
++
++# ---------- CT-10 / F-016: CORS restrito; cabeçalhos e limite de login ----------
++
++def test_ct10_cors_nao_libera_origem_arbitraria(api):
++    r = api.get("/produtos", headers={"Origin": "http://evil.example"})
++    assert r.status_code == 200
++    assert "Access-Control-Allow-Origin" not in r.headers
++
++
++def test_f016_cabecalhos_e_limite_de_tentativas_de_login(api, cliente):
++    r = api.get("/")
++    assert r.headers.get("X-Content-Type-Options") == "nosniff"
++    assert r.headers.get("X-Frame-Options") == "DENY"
++    status = [api.post("/login", {"email": cliente["email"], "senha": "errada"}).status_code for _ in range(6)]
++    assert status[:5] == [401] * 5 and status[5] == 429
++
++
++# ---------- CT-11 / F-025: status de pedido inexistente ----------
++
++def test_ct11_status_de_pedido_inexistente_retorna_404(api, admin_headers):
++    r = api.put("/pedidos/99999999/status", {"status": "aprovado"}, headers=admin_headers)
++    assert r.status_code == 404
++    assert r.json()["sucesso"] is False
++
++
++# ---------- CT-12 / F-021: e-mail único e usuário existente no pedido ----------
++
++def test_ct12_integridade_email_unico_e_usuario_existente(api, admin_headers, cliente):
++    r = api.post("/usuarios", {"nome": "Duplicado", "email": cliente["email"], "senha": "outra"})
++    assert r.status_code == 400
++    pid = _produto(api, admin_headers)
++    r = api.post("/pedidos", {"usuario_id": 99999999, "itens": [{"produto_id": pid, "quantidade": 1}]},
++                 headers=admin_headers)
++    assert r.status_code == 400
++    assert api.get(f"/produtos/{pid}").json()["dados"]["estoque"] == 5
++
++
++# ---------- F-007: senhas armazenadas com hash ----------
++
++def test_f007_senhas_armazenadas_com_hash(api, cliente, caminho_banco):
++    with sqlite3.connect(caminho_banco) as conexao:
++        do_cliente = conexao.execute("SELECT senha FROM usuarios WHERE email = ?", (cliente["email"],)).fetchone()[0]
++        do_admin = conexao.execute("SELECT senha FROM usuarios WHERE email = 'admin@loja.com'").fetchone()[0]
++    for armazenada in (do_cliente, do_admin):
++        assert armazenada.startswith(("scrypt:", "pbkdf2:"))
++    assert cliente["senha"] not in do_cliente
++
++
++# ---------- F-008: SQL injection ----------
++
++def test_f008_login_nao_aceita_sql_injection(api):
++    for email in ("admin@loja.com' --", "x' OR '1'='1' --"):
++        r = api.post("/login", {"email": email, "senha": "qualquer"})
++        assert r.status_code == 401
++
++
++def test_f008_texto_com_aspas_e_tratado_como_dado(api, admin_headers):
++    nome = "D'Avila " + _sufixo()
++    pid = _produto(api, admin_headers, nome=nome)
++    assert api.get(f"/produtos/{pid}").json()["dados"]["nome"] == nome
++    r = api.get("/produtos/busca", params={"q": "D'Avila"})
++    assert r.status_code == 200
++    assert any(p["id"] == pid for p in r.json()["dados"])
++    r = api.get("/produtos/busca", params={"q": "' OR 1=1 --"})
++    assert r.status_code == 200 and r.json()["total"] == 0
++
++
++# ---------- F-010: validação de entrada ----------
++
++def test_f010_quantidade_invalida_nao_altera_estoque(api, admin_headers, cliente):
++    pid = _produto(api, admin_headers, estoque=5)
++    for quantidade in (-3, 0, "2", 1.5):
++        r = api.post("/pedidos", {"usuario_id": cliente["id"], "itens": [{"produto_id": pid, "quantidade": quantidade}]},
++                     headers=cliente["headers"])
++        assert r.status_code == 400, quantidade
++    assert api.get(f"/produtos/{pid}").json()["dados"]["estoque"] == 5
++
++
++def test_f010_tipos_invalidos_e_corpo_ausente_retornam_400(api, admin_headers):
++    r = api.post("/produtos", {"nome": "Texto", "preco": "abc", "estoque": 1}, headers=admin_headers)
++    assert r.status_code == 400
++    r = api.post("/produtos", {"nome": "Texto", "preco": 1, "estoque": "muito"}, headers=admin_headers)
++    assert r.status_code == 400
++    pid = _produto(api, admin_headers)
++    r = api.put(f"/produtos/{pid}", {"nome": "Ok nome", "preco": 1, "estoque": 1, "categoria": "inexistente"},
++                headers=admin_headers)
++    assert r.status_code == 400
++    assert api.post("/login", None).status_code == 400
++
++
++# ---------- F-011: e-mail não vai para o log ----------
++
++def test_f011_email_nao_aparece_no_log(api, cliente, log_servidor):
++    api.post("/login", {"email": cliente["email"], "senha": cliente["senha"]})
++    api.post("/login", {"email": cliente["email"], "senha": "errada"})
++    conteudo = log_servidor.read_text(encoding="utf-8", errors="replace")
++    assert cliente["email"] not in conteudo
+diff --git a/code-smells-project/tests/test_unidade.py b/code-smells-project/tests/test_unidade.py
+new file mode 100644
+index 0000000..809f9fc
+--- /dev/null
++++ b/code-smells-project/tests/test_unidade.py
+@@ -0,0 +1,191 @@
++"""Testes de prova (unidade/estrutura) das correções que não são observáveis só pela rota.
++
++Cada teste cita o F-xxx/CT-xx do relatório reports/audit-project-1.md que comprova.
++"""
++import re
++import sys
++from pathlib import Path
++
++import pytest
++
++DIR_PROJETO = Path(__file__).resolve().parent.parent
++sys.path.insert(0, str(DIR_PROJETO))
++
++IGNORAR_DIRS = {"tests", ".venv", "venv", ".claude", "__pycache__", ".pytest_cache"}
++
++
++def _fontes():
++    return [p for p in DIR_PROJETO.rglob("*.py") if not (set(p.relative_to(DIR_PROJETO).parts) & IGNORAR_DIRS)]
++
++
++def _settings(tmp_path, **extra):
++    from config.settings import Settings
++    return Settings({"DB_PATH": str(tmp_path / "unit.db"), **extra})
++
++
++# ---------- F-001 / F-002: sem segredo, senha de seed ou debug fixos no código ----------
++
++def test_f001_f002_codigo_sem_segredos_nem_debug_fixo():
++    proibidos = [
++        r"SECRET_KEY[\"']?\]?\s*=\s*[\"']",                      # chave atribuída como literal
++        r"[\"']secret_key[\"']\s*:",                               # chave devolvida em resposta
++        r"\(\s*\"[^\"]+\",\s*\"[^\"]+@[^\"]+\",\s*\"[^\"]+\",\s*\"(admin|cliente)\"\s*\)",  # seed com senha literal
++        r"debug\s*=\s*True", r"[\"']0\.0\.0\.0[\"']", r"DEBUG[\"']\]\s*=\s*True",
++    ]
++    achados = [(p.name, padrao) for p in _fontes() for padrao in proibidos
++               if re.search(padrao, p.read_text(encoding="utf-8"))]
++    assert achados == []
++
++
++def test_f001_f002_config_padrao_segura():
++    from config.settings import Settings
++    a, b = Settings({}), Settings({})
++    assert a.DEBUG is False and a.HOST == "127.0.0.1"
++    assert a.SEED_ADMIN_PASSWORD is None and a.SEED_CLIENTE_PASSWORD is None
++    assert a.SECRET_KEY and a.SECRET_KEY != b.SECRET_KEY  # chave aleatória por processo, nunca literal
++    assert Settings({"SECRET_KEY": "k" * 32}).SECRET_KEY == "k" * 32
++
++
++# ---------- F-007: hash de senha e migração de senha legada ----------
++
++class _UsuariosEmMemoria:
++    def __init__(self):
++        self.registros = {}
++
++    def obter(self, usuario_id):
++        return self.registros.get(usuario_id)
++
++    def obter_por_email(self, email):
++        return next((u for u in self.registros.values() if u["email"] == email), None)
++
++    def criar(self, nome, email, senha_hash, tipo="cliente"):
++        novo_id = len(self.registros) + 1
++        self.registros[novo_id] = {"id": novo_id, "nome": nome, "email": email, "senha": senha_hash, "tipo": tipo}
++        return novo_id
++
++    def atualizar_senha(self, usuario_id, senha_hash):
++        self.registros[usuario_id]["senha"] = senha_hash
++
++
++def test_f007_cadastro_grava_hash_e_login_verifica():
++    from services.usuario_service import UsuarioService
++    repo = _UsuariosEmMemoria()
++    servico = UsuarioService(repo)
++    uid = servico.criar("Ana", "ana@x.com", "s3nha-forte")
++    assert repo.registros[uid]["senha"].startswith(("scrypt:", "pbkdf2:"))
++    assert servico.autenticar("ana@x.com", "s3nha-forte")["id"] == uid
++    assert servico.autenticar("ana@x.com", "errada") is None
++
++
++def test_f007_senha_legada_em_texto_e_migrada_no_login():
++    from services.usuario_service import UsuarioService
++    repo = _UsuariosEmMemoria()
++    repo.registros[1] = {"id": 1, "nome": "Legado", "email": "leg@x.com", "senha": "antiga", "tipo": "cliente"}
++    servico = UsuarioService(repo)
++    assert servico.autenticar("leg@x.com", "errada") is None
++    assert repo.registros[1]["senha"] == "antiga"
++    assert servico.autenticar("leg@x.com", "antiga")["id"] == 1
++    assert repo.registros[1]["senha"].startswith(("scrypt:", "pbkdf2:"))
++
++
++# ---------- CT-07: token assinado ----------
++
++def test_ct07_token_assinado_e_verificado():
++    from services.auth_service import TokenService
++    servico = TokenService("chave-de-teste", 60)
++    token = servico.emitir({"id": 7, "tipo": "admin"})
++    assert servico.verificar(token) == {"id": 7, "tipo": "admin"}
++    assert servico.verificar(token + "x") is None
++    assert TokenService("outra-chave", 60).verificar(token) is None
++
++
++# ---------- F-012: transação na criação do pedido ----------
++
++def _banco_com_dados(tmp_path):
++    from database.connection import conectar
++    from database.schema import inicializar_banco
++    settings = _settings(tmp_path)
++    inicializar_banco(settings)
++    conexao = conectar(settings.DB_PATH)
++    with conexao:
++        conexao.execute("INSERT INTO usuarios (nome, email, senha, tipo) VALUES ('U', 'u@x.com', 'h', 'cliente')")
++    return conexao
++
++
++def test_f012_falha_no_meio_desfaz_baixa_de_estoque(tmp_path):
++    from models.pedido_model import EstoqueInsuficiente, PedidoModel, ProdutoInexistente
++    from services.pedido_service import calcular_total
++    conexao = _banco_com_dados(tmp_path)
++    modelo = PedidoModel(lambda: conexao)
++    estoque = lambda pid: conexao.execute("SELECT estoque FROM produtos WHERE id = ?", (pid,)).fetchone()[0]
++
++    with pytest.raises(ProdutoInexistente):
++        modelo.criar(1, [{"produto_id": 1, "quantidade": 2}, {"produto_id": 9999, "quantidade": 1}], calcular_total)
++    with pytest.raises(EstoqueInsuficiente):
++        modelo.criar(1, [{"produto_id": 1, "quantidade": 2}, {"produto_id": 6, "quantidade": 999}], calcular_total)
++    assert estoque(1) == 10 and estoque(6) == 8
++    assert conexao.execute("SELECT COUNT(*) FROM pedidos").fetchone()[0] == 0
++    assert conexao.execute("SELECT COUNT(*) FROM itens_pedido").fetchone()[0] == 0
++
++    modelo.criar(1, [{"produto_id": 6, "quantidade": 8}], calcular_total)
++    with pytest.raises(EstoqueInsuficiente):  # baixa condicional: não vende além do estoque
++        modelo.criar(1, [{"produto_id": 6, "quantidade": 1}], calcular_total)
++    assert estoque(6) == 0
++    conexao.close()
++
++
++# ---------- F-014: regra de negócio isolada em services (testável sem HTTP/banco) ----------
++
++def test_f014_regras_testaveis_sem_http():
++    from decimal import Decimal
++
++    from services.erros import AppError
++    from services.pedido_service import PedidoService, calcular_total
++    from services.relatorio_service import calcular_desconto
++
++    assert calcular_desconto(20000) == Decimal("2000.00")
++    assert calcular_desconto(6000) == Decimal("300.00")
++    assert calcular_desconto(2000) == Decimal("40.00")
++    assert calcular_desconto(1000) == 0
++    assert calcular_total([(0.1, 3), (0.2, 1)]) == 0.5
++
++    class _SemUsuario:
++        def existe(self, _):
++            return False
++
++    with pytest.raises(AppError) as erro:
++        PedidoService(pedido_model=None, usuario_service=_SemUsuario()).criar(1, [{"produto_id": 1, "quantidade": 1}])
++    assert erro.value.status == 400
++
++
++# ---------- F-015: sem conexão global compartilhada ----------
++
++def test_f015_apps_nao_compartilham_conexao(tmp_path):
++    import database.connection as conexao_mod
++    from app import create_app
++    assert not any(isinstance(v, __import__("sqlite3").Connection) for v in vars(conexao_mod).values())
++    (tmp_path / "a").mkdir()
++    (tmp_path / "b").mkdir()
++    app_a = create_app(_settings(tmp_path / "a"))
++    app_b = create_app(_settings(tmp_path / "b"))
++    with app_a.app_context():
++        app_a.extensions["loja"].produto_service.criar(
++            {"nome": "Só em A", "descricao": "", "preco": 1, "estoque": 1, "categoria": "geral"})
++        em_a = app_a.extensions["loja"].sistema_service.contagens()["produtos"]
++    with app_b.app_context():
++        em_b = app_b.extensions["loja"].sistema_service.contagens()["produtos"]
++    assert (em_a, em_b) == (11, 10)
++
++
++# ---------- F-009 / F-013: camadas separadas; sem SQL fora da camada de dados ----------
++
++def test_f009_f013_sem_sql_fora_da_camada_de_dados():
++    camadas_http = [p for p in _fontes() if p.parts[-2] in ("controllers", "routes", "views", "middlewares")]
++    camadas_http.append(DIR_PROJETO / "app.py")
++    assert len(camadas_http) >= 8
++    for arquivo in camadas_http:
++        codigo = arquivo.read_text(encoding="utf-8")
++        assert "sqlite3" not in codigo and ".execute(" not in codigo, arquivo.name
++        assert not re.search(r"\b(SELECT|INSERT|UPDATE|DELETE)\b\s", codigo), arquivo.name
++    for pacote in ("config", "models", "services", "controllers", "routes", "views", "middlewares", "database"):
++        assert (DIR_PROJETO / pacote).is_dir(), pacote

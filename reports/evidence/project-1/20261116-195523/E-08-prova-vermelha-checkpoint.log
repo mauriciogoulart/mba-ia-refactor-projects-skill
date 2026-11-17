@@ -1,0 +1,150 @@
+### E-08 · Testes de prova contra o checkpoint do código original (sensibilidade)
+Comando: python -m pytest -p no:cacheprovider tests/test_seguranca.py tests/test_unidade.py -rA --tb=line | Diretório: <tmp>\exec-p1\prova-vermelha (código do checkpoint f77fadc + testes novos) | K-05 · Classe B | Início: 2026-11-16T20:12:41-03:00 | Fim: 2026-11-16T20:12:46-03:00 | Exit code: 1
+Origem:       K-05 · 06 §8.9 · Classe B (cópia fora do projeto) · Autorização: automática (classe B)
+Ambiente:     Windows 11; Python 3.14.0 (.venv); Flask 3.1.1; flask-cors 5.0.1; pytest 9.2.0; requests 2.34.2
+Resultado:    passed 0 | failed 28 (esperado: todos vermelhos no código original)
+Observação:   no checkpoint, test_ct02 apaga o banco via /admin/reset-db sem autenticação; por isso test_f007 falhou por TypeError aqui e foi reexecutado isolado em E-09
+
+Saída capturada:
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.2.0, pluggy-1.7.0
+rootdir: C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha
+configfile: pytest.ini
+collected 28 items
+
+tests\test_seguranca.py FFFFFFFFFFFFFFFFFFF                              [ 67%]
+tests\test_unidade.py FFFFFFFFF                                          [100%]
+
+================================== FAILURES ===================================
+E   assert 200 in (404, 405)
+     +  where 200 = <Response [200]>.status_code
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:42: assert 200 in (404, 405)
+E   AssertionError: assert 200 == 401
+     +  where 200 = <Response [200]>.status_code
+     +    where <Response [200]> = post('/admin/reset-db', headers={})
+     +      where post = <conftest.Cliente object at 0x000001D0E3737380>.post
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:48: AssertionError: assert 200 == 401
+E   AssertionError: assert 200 == 401
+     +  where 200 = <Response [200]>.status_code
+     +    where <Response [200]> = get('/relatorios/vendas', headers={})
+     +      where get = <conftest.Cliente object at 0x000001D0E3737380>.get
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:57: AssertionError: assert 200 == 401
+E   AssertionError: assert 201 == 401
+     +  where 201 = <Response [201]>.status_code
+     +    where <Response [201]> = post('/produtos', {'nome': 'Bloqueado', 'preco': 1, 'estoque': 1}, headers={})
+     +      where post = <conftest.Cliente object at 0x000001D0E3737380>.post
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:67: AssertionError: assert 201 == 401
+E   AssertionError: assert 200 == 401
+     +  where 200 = <Response [200]>.status_code
+     +    where <Response [200]> = get('/usuarios', headers={})
+     +      where get = <conftest.Cliente object at 0x000001D0E3737380>.get
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:81: AssertionError: assert 200 == 401
+E   AssertionError: assert 201 == 401
+     +  where 201 = <Response [201]>.status_code
+     +    where <Response [201]> = post('/pedidos', {'usuario_id': 8, 'itens': [{'produto_id': 12, 'quantidade': 1}]}, headers={})
+     +      where post = <conftest.Cliente object at 0x000001D0E3737380>.post
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:95: AssertionError: assert 201 == 401
+E   assert (False)
+     +  where False = isinstance(None, str)
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:119: assert (False)
+E   AssertionError: assert ([{'criado_em': '2026-11-16 23:12:45', 'email': 'cbf5d51b9@teste.com', 'id': 5, 'nome': 'Cliente Prova', ...}, {'criado...a', ...}, {'criado_em': '2026-11-16 23:12:45', 'email': 'c83e4bb9d@teste.com', 'id': 10, 'nome': 'Cliente Prova', ...}] and False)
+     +  where False = all(<generator object test_ct08_usuarios_sem_campo_senha.<locals>.<genexpr> at 0x000001D0E3843780>)
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:130: AssertionError: assert ([{'criado_em': '2026-11-16 23:12:45', 'email': 'cbf5d51b9@teste.com', 'id': 5, 'nome': 'Cliente Prova', ...}, {'criado...a', ...}, {'criado_em': '2026-11-16 23:12:45', 'email': 'c83e4bb9d@teste.com', 'id': 10, 'nome': 'Cliente Prova', ...}] and False)
+E   AssertionError: assert 'secret_key' not in {'ambiente': 'producao', 'counts': {'pedidos': 1, 'produtos': 2, 'usuarios': 6}, 'database': 'connected', 'db_path': 'loja.db', ...}
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:139: AssertionError: assert 'secret_key' not in {'ambiente': 'producao', 'counts': {'pedidos': 1, 'produtos': 2, 'usuarios': 6}, 'database': 'connected', 'db_path': 'loja.db', ...}
+E   AssertionError: assert 'Access-Control-Allow-Origin' not in {'Server': 'Werkzeug/3.1.9 Python/3.14.0', 'Date': 'Mon, 16 Nov 2026 23:12:46 GMT', 'Content-Type': 'application/json', 'Content-Length': '457', 'Access-Control-Allow-Origin': 'http://evil.example', 'Vary': 'Origin', 'Connection': 'close'}
+     +  where {'Server': 'Werkzeug/3.1.9 Python/3.14.0', 'Date': 'Mon, 16 Nov 2026 23:12:46 GMT', 'Content-Type': 'application/json', 'Content-Length': '457', 'Access-Control-Allow-Origin': 'http://evil.example', 'Vary': 'Origin', 'Connection': 'close'} = <Response [200]>.headers
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:148: AssertionError: assert 'Access-Control-Allow-Origin' not in {'Server': 'Werkzeug/3.1.9 Python/3.14.0', 'Date': 'Mon, 16 Nov 2026 23:12:46 GMT', 'Content-Type': 'application/json', 'Content-Length': '457', 'Access-Control-Allow-Origin': 'http://evil.example', 'Vary': 'Origin', 'Connection': 'close'}
+E   AssertionError: assert None == 'nosniff'
+     +  where None = get('X-Content-Type-Options')
+     +    where get = {'Server': 'Werkzeug/3.1.9 Python/3.14.0', 'Date': 'Mon, 16 Nov 2026 23:12:46 GMT', 'Content-Type': 'application/json', 'Content-Length': '264', 'Access-Control-Allow-Origin': '*', 'Connection': 'close'}.get
+     +      where {'Server': 'Werkzeug/3.1.9 Python/3.14.0', 'Date': 'Mon, 16 Nov 2026 23:12:46 GMT', 'Content-Type': 'application/json', 'Content-Length': '264', 'Access-Control-Allow-Origin': '*', 'Connection': 'close'} = <Response [200]>.headers
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:153: AssertionError: assert None == 'nosniff'
+E   assert 200 == 404
+     +  where 200 = <Response [200]>.status_code
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:163: assert 200 == 404
+E   assert 201 == 400
+     +  where 201 = <Response [201]>.status_code
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:171: assert 201 == 400
+E   TypeError: 'NoneType' object is not subscriptable
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:184: TypeError: 'NoneType' object is not subscriptable
+E   assert 200 == 401
+     +  where 200 = <Response [200]>.status_code
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:195: assert 200 == 401
+E   AssertionError: {
+        "erro": "near \"Avila\": syntax error"
+      }
+      
+    assert 500 == 201
+     +  where 500 = <Response [500]>.status_code
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:33: AssertionError: {
+E   AssertionError: -3
+    assert 201 == 400
+     +  where 201 = <Response [201]>.status_code
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:216: AssertionError: -3
+E   assert 500 == 400
+     +  where 500 = <Response [500]>.status_code
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:222: assert 500 == 400
+E   assert 'c090dc973@teste.com' not in '===========...1.1" 401 -\n'
+      
+      'c090dc973@teste.com' is contained here:
+        o criado: c090dc973@teste.com
+        127.0.0.1 - - [16/Nov/2026 20:12:46] "POST /usuarios HTTP/1.1" 201 -
+        Login bem-sucedido: c090dc973@teste.com
+        127.0.0.1 - - [16/Nov/2026 20:12:46] "POST /login HTTP/1.1" 200 -
+        Login bem-sucedido: c090dc973@teste.com...
+      
+      ...Full output truncated, use '-vv' to show
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:238: assert 'c090dc973@teste.com' not in '===========...1.1" 401 -\n'
+E   AssertionError: assert [('app.py', '...min123'), ...] == []
+      
+      Left contains 8 more items, first extra item: ('app.py', 'minha-chave')
+      Use -v to get more diff
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_unidade.py:33: AssertionError: assert [('app.py', '...min123'), ...] == []
+E   ModuleNotFoundError: No module named 'config'
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_unidade.py:37: ModuleNotFoundError: No module named 'config'
+E   ModuleNotFoundError: No module named 'services'
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_unidade.py:67: ModuleNotFoundError: No module named 'services'
+E   ModuleNotFoundError: No module named 'services'
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_unidade.py:77: ModuleNotFoundError: No module named 'services'
+E   ModuleNotFoundError: No module named 'services'
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_unidade.py:90: ModuleNotFoundError: No module named 'services'
+E   ModuleNotFoundError: No module named 'models.pedido_model'; 'models' is not a package
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_unidade.py:112: ModuleNotFoundError: No module named 'models.pedido_model'; 'models' is not a package
+E   ModuleNotFoundError: No module named 'services'
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_unidade.py:138: ModuleNotFoundError: No module named 'services'
+E   ModuleNotFoundError: No module named 'database.connection'; 'database' is not a package
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_unidade.py:160: ModuleNotFoundError: No module named 'database.connection'; 'database' is not a package
+E   AssertionError: assert 1 >= 8
+     +  where 1 = len([WindowsPath('C:/Users/maury/AppData/Local/Temp/claude/5e8788bb76161e32/b6ba369c-f235-496e-bc99-b1782d5fead4/scratchpad/exec-p1/prova-vermelha/app.py')])
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_unidade.py:181: AssertionError: assert 1 >= 8
+=========================== short test summary info ===========================
+FAILED tests/test_seguranca.py::test_ct01_admin_query_removida - assert 200 i...
+FAILED tests/test_seguranca.py::test_ct02_reset_db_exige_admin - AssertionErr...
+FAILED tests/test_seguranca.py::test_ct03_relatorio_exige_admin - AssertionEr...
+FAILED tests/test_seguranca.py::test_ct04_escrita_de_produtos_exige_admin - A...
+FAILED tests/test_seguranca.py::test_ct05_usuarios_exigem_token - AssertionEr...
+FAILED tests/test_seguranca.py::test_ct06_pedidos_exigem_token_e_propriedade
+FAILED tests/test_seguranca.py::test_ct07_login_emite_token_que_autentica - a...
+FAILED tests/test_seguranca.py::test_ct08_usuarios_sem_campo_senha - Assertio...
+FAILED tests/test_seguranca.py::test_ct09_health_sem_segredos - AssertionErro...
+FAILED tests/test_seguranca.py::test_ct10_cors_nao_libera_origem_arbitraria
+FAILED tests/test_seguranca.py::test_f016_cabecalhos_e_limite_de_tentativas_de_login
+FAILED tests/test_seguranca.py::test_ct11_status_de_pedido_inexistente_retorna_404
+FAILED tests/test_seguranca.py::test_ct12_integridade_email_unico_e_usuario_existente
+FAILED tests/test_seguranca.py::test_f007_senhas_armazenadas_com_hash - TypeE...
+FAILED tests/test_seguranca.py::test_f008_login_nao_aceita_sql_injection - as...
+FAILED tests/test_seguranca.py::test_f008_texto_com_aspas_e_tratado_como_dado
+FAILED tests/test_seguranca.py::test_f010_quantidade_invalida_nao_altera_estoque
+FAILED tests/test_seguranca.py::test_f010_tipos_invalidos_e_corpo_ausente_retornam_400
+FAILED tests/test_seguranca.py::test_f011_email_nao_aparece_no_log - assert '...
+FAILED tests/test_unidade.py::test_f001_f002_codigo_sem_segredos_nem_debug_fixo
+FAILED tests/test_unidade.py::test_f001_f002_config_padrao_segura - ModuleNot...
+FAILED tests/test_unidade.py::test_f007_cadastro_grava_hash_e_login_verifica
+FAILED tests/test_unidade.py::test_f007_senha_legada_em_texto_e_migrada_no_login
+FAILED tests/test_unidade.py::test_ct07_token_assinado_e_verificado - ModuleN...
+FAILED tests/test_unidade.py::test_f012_falha_no_meio_desfaz_baixa_de_estoque
+FAILED tests/test_unidade.py::test_f014_regras_testaveis_sem_http - ModuleNot...
+FAILED tests/test_unidade.py::test_f015_apps_nao_compartilham_conexao - Modul...
+FAILED tests/test_unidade.py::test_f009_f013_sem_sql_fora_da_camada_de_dados
+============================= 28 failed in 4.79s ==============================

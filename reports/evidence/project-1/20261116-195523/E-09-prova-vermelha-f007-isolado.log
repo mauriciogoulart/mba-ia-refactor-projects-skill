@@ -1,0 +1,25 @@
+### E-09 · Prova vermelha isolada de F-007 no checkpoint
+Comando:      python -m pytest -p no:cacheprovider tests/test_seguranca.py::test_f007_senhas_armazenadas_com_hash --tb=line
+Diretório:    <tmp>\exec-p1\prova-vermelha (código do checkpoint + testes novos)
+Origem:       K-05 · Classe B · Autorização: automática (classe B)
+Início/Fim:   2026-11-16T20:13:06-03:00 → 2026-11-16T20:13:10-03:00        Exit code: 1
+Ambiente:     Windows 11; Python 3.14.0 (.venv); Flask 3.1.1; flask-cors 5.0.1; pytest 9.2.0; requests 2.34.2
+Resultado:    failed 1 (assert armazenada.startswith(("scrypt:", "pbkdf2:")) → False: senha em texto puro)
+
+Saída capturada:
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.2.0, pluggy-1.7.0
+rootdir: C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha
+configfile: pytest.ini
+collected 1 item
+
+tests\test_seguranca.py F                                                [100%]
+
+================================== FAILURES ===================================
+E   AssertionError: assert False
+     +  where False = <built-in method startswith of str object at 0x00000175AADD35B0>(('scrypt:', 'pbkdf2:'))
+     +    where <built-in method startswith of str object at 0x00000175AADD35B0> = 'segredo-091f2f9f'.startswith
+C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\prova-vermelha\tests\test_seguranca.py:186: AssertionError: assert False
+=========================== short test summary info ===========================
+FAILED tests/test_seguranca.py::test_f007_senhas_armazenadas_com_hash - Asser...
+============================== 1 failed in 2.94s ==============================

@@ -60,11 +60,11 @@ Decisões do usuário para a v2:
 
 | # | Item | Status | Observação |
 |---|---|---|---|
-| 3.1 | P1 code-smells-project — Fases 1 e 2 (pausa) | ⏳ | |
-| 3.2 | P1 — respostas e Fase 3 | ⏳ | |
-| 3.3 | P1 — commit | ⏳ | |
-| 3.4 | P1 — validação independente (subagente) | ⏳ | |
-| 3.5 | P2 ecommerce-api-legacy — Fases 1 e 2 (pausa) | ⏳ | |
+| 3.1 | P1 code-smells-project — Fases 1 e 2 (pausa) | ✅ | Run id 20261116-195523; 31 findings (9 C / 6 H / 10 M / 6 L); P3 com 3 opções e asterisco "3 CRITICAL e 0 HIGH ficarão sem correção" |
+| 3.2 | P1 — respostas e Fase 3 | ✅ | respostas `1A 2A 3A 4A`; na Fase 3: lote C `1A` (checkpoint + worktree temporária) e design de autenticação `2A` (token assinado no `/login`). Veredito VALIDADO (V1+V4); 0 CRITICAL/HIGH residuais; testes 23 → 51 (28 de prova: 9 unidade, 19 integração, todos vermelhos no original); execução local autenticada com 52 requisições (E-03 × E-07) |
+| 3.3 | P1 — commit | ✅ | ver registro |
+| 3.4 | P1 — validação independente (subagente) | 🔄 | |
+| 3.5 | P2 ecommerce-api-legacy — Fases 1 e 2 (pausa) | 🔄 | executor: subagente sem contexto prévio |
 | 3.6 | P2 — respostas e Fase 3 | ⏳ | |
 | 3.7 | P2 — commit | ⏳ | |
 | 3.8 | P2 — validação independente (subagente) | ⏳ | |

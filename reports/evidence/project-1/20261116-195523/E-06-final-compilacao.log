@@ -1,0 +1,10 @@
+### E-06 · Compilação estática V5 (após refatoração)
+Comando:      python -c "compile(...)" em todos os .py do código-fonte (sem gravar .pyc)
+Diretório:    code-smells-project
+Origem:       K-02 · Classe B · Autorização: automática (classe B)
+Início/Fim:   E-06 Início: 2026-11-16T21:29:42-03:00 | Exit code: 0
+Ambiente:     Windows 11; Python 3.14.0 (.venv); Flask 3.1.1; flask-cors 5.0.1; pytest 9.2.0; requests 2.34.2
+Resultado:    35 arquivos compilados sem erro
+
+Saída capturada:
+compilados sem erro (35): ['app.py', 'config\\__init__.py', 'config\\logging_config.py', 'config\\settings.py', 'controllers\\__init__.py', 'controllers\\pedido_controller.py', 'controllers\\produto_controller.py', 'controllers\\sistema_controller.py', 'controllers\\usuario_controller.py', 'controllers\\validators.py', 'database\\__init__.py', 'database\\connection.py', 'database\\schema.py', 'middlewares\\__init__.py', 'middlewares\\auth.py', 'middlewares\\errors.py', 'middlewares\\security.py', 'models\\__init__.py', 'models\\admin_model.py', 'models\\pedido_model.py', 'models\\produto_model.py', 'models\\usuario_model.py', 'routes\\__init__.py', 'services\\__init__.py', 'services\\auth_service.py', 'services\\dinheiro.py', 'services\\erros.py', 'services\\pedido_service.py', 'services\\produto_service.py', 'services\\regras.py', 'services\\relatorio_service.py', 'services\\sistema_service.py', 'services\\usuario_service.py', 'views\\__init__.py', 'views\\serializers.py']
