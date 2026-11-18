@@ -67,9 +67,9 @@ Decisões do usuário para a v2:
 | 3.5 | P2 ecommerce-api-legacy — Fases 1 e 2 (pausa) | ✅ | Run id 20261116-213657; 25 findings (6 C / 7 H / 7 M / 5 L); pagamento simulado (F-002, SEC-14) com correção P-20 em todas as opções; asterisco de Manter contrato*: "1 CRITICAL (F-003) e 1 HIGH (F-008) ficarão sem correção; exige segunda confirmação" |
 | 3.6 | P2 — respostas e Fase 3 | ✅ | respostas `1A 2A 3A 4A`; lote C aprovado; autenticação admin por `ADMIN_API_KEY` (nega tudo sem a variável). Veredito VALIDADO (V1+V3+V4); 0 CRITICAL/HIGH residuais; testes 8 → 33 (25 de prova: 18 unidade, 7 integração); execução local autenticada com 21 requisições (E-04 × E-08), 0 divergentes |
 | 3.7 | P2 — commit | ✅ | ver registro |
-| 3.8 | P2 — validação independente (subagente) | 🔄 | |
+| 3.8 | P2 — validação independente (subagente) | ✅ | APROVADO com ressalvas não bloqueantes ([validação](validacoes/validacao-project-2_2026-11-18_v3.md)): os 4 itens do avaliador atendidos; 33/33 reexecutado; 113/113 verificações em execução real; 70/70 referências de linha; 14 de 15 mutantes detectados. Ressalvas: falta teste de "sem `ADMIN_API_KEY` nega tudo"; e-mail com caixa diferente cria conta separada; mudanças de resposta fora da tabela de contratos (`c_id` inválido, cartão curto, 429); limite de taxa não numérico vira `NaN`; README/`api.http` do projeto desatualizados |
 | 3.9 | P3 task-manager-api — Fases 1 e 2 (pausa) | ✅ | Run id 20261116-214549; 28 findings (7 C / 4 H / 11 M / 6 L); asterisco de Manter contrato*: "3 CRITICAL (F-002, F-006, F-007) e 0 HIGH ficarão sem correção"; execução interrompida por limite de uso da API e retomada em 2026-11-18 |
-| 3.10 | P3 — respostas e Fase 3 | 🔄 | respostas `1A 2A 3A 4A` |
+| 3.10 | P3 — respostas e Fase 3 | 🔄 | respostas `1A 2A 3A 4A`; lote C aprovado; token assinado no `/login`. A reauditoria achou um HIGH novo (SEC-11, acesso a dados de terceiros): incluída a correção C-17 / CT-09 em vez de deixá-lo residual |
 | 3.11 | P3 — commit | ⏳ | |
 | 3.12 | P3 — validação independente (subagente) | ⏳ | |
 
