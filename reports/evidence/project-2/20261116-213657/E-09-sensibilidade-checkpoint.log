@@ -1,0 +1,357 @@
+### E-09 · Prova de sensibilidade — testes novos contra o código original (cópia do checkpoint)
+Comando:      node --test (test/*.test.js da refatoração copiados para a worktree do checkpoint)
+Diretório:    TMP/checkpoint/ecommerce-api-legacy
+Origem:       K-06 · 06 §8.9 · Classe B (cópia fora do projeto) · Autorização: automática (classe B)
+Início/Fim:   2026-11-18T19:28:54-03:00 → 2026-11-18T19:28:54-03:00 (duração 0 s)        Exit code: 1
+Ambiente:     Node v24.11.1, npm 11.6.4, express 4.22.1, sqlite3 5.1.7, Windows 11
+Resultado:    passed 8 (testes originais adaptados) | failed 14 (provas T4 vermelhas no original)
+Saída capturada (segredos mascarados):
+▶ LMS API
+  ✔ relatório financeiro inicial reflete os seeds (20.8699ms)
+  ✔ checkout sem campos obrigatórios retorna 400 (17.4662ms)
+  ✔ checkout de curso inexistente retorna 404 (2.5351ms)
+  ✔ checkout com cartão recusado retorna 400 (10.4844ms)
+  ✔ checkout com sucesso cria usuário e matrícula (7.5244ms)
+  ✔ relatório financeiro reflete o checkout aprovado (4.3594ms)
+  ✔ checkout de usuário já existente reutiliza o cadastro (5.3243ms)
+  ✔ DELETE /api/users/:id retorna 200 (2.3399ms)
+  ✖ CT-01: relatório financeiro exige credencial de administrador (2.9463ms)
+  ✖ CT-02: DELETE de usuário exige credencial e não remove sem ela (1.9372ms)
+  ✖ CT-04: DELETE remove matrículas e pagamentos e responde 404 para id inexistente (1.2491ms)
+  ✖ CT-03: checkout de e-mail cadastrado exige a senha da conta (2.6477ms)
+  ✖ F-001: logs não contêm número de cartão nem chave do gateway (7.731ms)
+  ✖ F-007: cartão não textual retorna 400 e não derruba o processo (11.8835ms)
+✖ LMS API (523.2643ms)
+node:internal/modules/cjs/loader:1424
+  throw err;
+  ^
+
+Error: Cannot find module '../src/database/connection'
+Require stack:
+- C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\checkout-service.test.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+    at Module._load (node:internal/modules/cjs/loader:1227:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.require (node:internal/modules/cjs/loader:1504:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\checkout-service.test.js:4:26)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\test\\checkout-service.test.js'
+  ]
+}
+
+Node.js v24.11.1
+✖ test\checkout-service.test.js (88.8503ms)
+node:internal/modules/cjs/loader:1424
+  throw err;
+  ^
+
+Error: Cannot find module '../src/config/settings'
+Require stack:
+- C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\composition-root.test.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+    at Module._load (node:internal/modules/cjs/loader:1227:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.require (node:internal/modules/cjs/loader:1504:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\composition-root.test.js:5:26)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\test\\composition-root.test.js'
+  ]
+}
+
+Node.js v24.11.1
+✖ test\composition-root.test.js (310.2601ms)
+node:internal/modules/cjs/loader:1424
+  throw err;
+  ^
+
+Error: Cannot find module '../src/services/passwordService'
+Require stack:
+- C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\password-service.test.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+    at Module._load (node:internal/modules/cjs/loader:1227:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.require (node:internal/modules/cjs/loader:1504:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\password-service.test.js:4:35)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\test\\password-service.test.js'
+  ]
+}
+
+Node.js v24.11.1
+✖ test\password-service.test.js (89.1086ms)
+node:internal/modules/cjs/loader:1424
+  throw err;
+  ^
+
+Error: Cannot find module '../src/services/payment/gatewayFactory'
+Require stack:
+- C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\payment-gateway.test.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+    at Module._load (node:internal/modules/cjs/loader:1227:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.require (node:internal/modules/cjs/loader:1504:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\payment-gateway.test.js:4:34)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\test\\payment-gateway.test.js'
+  ]
+}
+
+Node.js v24.11.1
+✖ test\payment-gateway.test.js (98.2217ms)
+node:internal/modules/cjs/loader:1424
+  throw err;
+  ^
+
+Error: Cannot find module '../src/services/reportService'
+Require stack:
+- C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\report-service.test.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+    at Module._load (node:internal/modules/cjs/loader:1227:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.require (node:internal/modules/cjs/loader:1504:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\report-service.test.js:4:33)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\test\\report-service.test.js'
+  ]
+}
+
+Node.js v24.11.1
+✖ test\report-service.test.js (92.5539ms)
+▶ configuração
+  ✖ código-fonte não contém segredos literais (5.0825ms)
+  ✖ sem ambiente não há credencial nem provedor padrão (0.7058ms)
+  ✖ segredos são lidos do ambiente (0.5796ms)
+✖ configuração (7.4175ms)
+ℹ tests 22
+ℹ suites 2
+ℹ pass 8
+ℹ fail 14
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 667.4404
+
+✖ failing tests:
+
+test at test\api.test.js:145:5
+✖ CT-01: relatório financeiro exige credencial de administrador (2.9463ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  200 !== 401
+  
+      at TestContext.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\api.test.js:147:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 200,
+    expected: 401,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\api.test.js:154:5
+✖ CT-02: DELETE de usuário exige credencial e não remove sem ela (1.9372ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  200 !== 401
+  
+      at TestContext.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\api.test.js:156:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 200,
+    expected: 401,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\api.test.js:163:5
+✖ CT-04: DELETE remove matrículas e pagamentos e responde 404 para id inexistente (1.2491ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  200 !== 404
+  
+      at TestContext.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\api.test.js:165:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 200,
+    expected: 404,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\api.test.js:172:5
+✖ CT-03: checkout de e-mail cadastrado exige a senha da conta (2.6477ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  200 !== 401
+  
+      at TestContext.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\api.test.js:175:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 200,
+    expected: 401,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\api.test.js:184:5
+✖ F-001: logs não contêm número de cartão nem chave do gateway (7.731ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(!saida.includes('4111********4444'))
+  
+      at TestContext.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\api.test.js:186:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test\api.test.js:192:5
+✖ F-007: cartão não textual retorna 400 e não derruba o processo (11.8835ms)
+  TypeError: fetch failed
+      at node:internal/deps/undici/undici:15845:13
+      at async TestContext.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\api.test.js:193:19)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    [cause]: Error: read ECONNRESET
+        at TCP.onStreamRead (node:internal/stream_base_commons:216:20) {
+      errno: -4077,
+      code: 'ECONNRESET',
+      syscall: 'read'
+    }
+  }
+
+test at test\checkout-service.test.js:1:1
+✖ test\checkout-service.test.js (88.8503ms)
+  'test failed'
+
+test at test\composition-root.test.js:1:1
+✖ test\composition-root.test.js (310.2601ms)
+  'test failed'
+
+test at test\password-service.test.js:1:1
+✖ test\password-service.test.js (89.1086ms)
+  'test failed'
+
+test at test\payment-gateway.test.js:1:1
+✖ test\payment-gateway.test.js (98.2217ms)
+  'test failed'
+
+test at test\report-service.test.js:1:1
+✖ test\report-service.test.js (92.5539ms)
+  'test failed'
+
+test at test\settings.test.js:18:5
+✖ código-fonte não contém segredos literais (5.0825ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + [
+  +   'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\src\\AppManager.js',
+  +   'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\src\\utils.js'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\settings.test.js:20:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.start (node:internal/test_runner/test:1003:17)
+      at node:internal/test_runner/test:1516:71
+      at node:internal/per_context/primordials:464:82
+      at new Promise (<anonymous>)
+      at new SafePromise (node:internal/per_context/primordials:433:3)
+      at node:internal/per_context/primordials:464:9
+      at Array.map (<anonymous>) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\src\\AppManager.js', 'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\src\\utils.js' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test\settings.test.js:23:5
+✖ sem ambiente não há credencial nem provedor padrão (0.7058ms)
+  Error: Cannot find module '../src/config/settings'
+  Require stack:
+  - C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\settings.test.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+      at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+      at Module._load (node:internal/modules/cjs/loader:1227:37)
+      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+      at Module.require (node:internal/modules/cjs/loader:1504:12)
+      at require (node:internal/modules/helpers:152:16)
+      at TestContext.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\settings.test.js:24:34)
+      at Test.runInAsyncScope (node:async_hooks:214:14) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ 'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\test\\settings.test.js' ]
+  }
+
+test at test\settings.test.js:32:5
+✖ segredos são lidos do ambiente (0.5796ms)
+  Error: Cannot find module '../src/config/settings'
+  Require stack:
+  - C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\settings.test.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+      at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+      at Module._load (node:internal/modules/cjs/loader:1227:37)
+      at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+      at Module.require (node:internal/modules/cjs/loader:1504:12)
+      at require (node:internal/modules/helpers:152:16)
+      at TestContext.<anonymous> (C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p2\checkpoint\ecommerce-api-legacy\test\settings.test.js:33:34)
+      at Test.runInAsyncScope (node:async_hooks:214:14) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ 'C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p2\\checkpoint\\ecommerce-api-legacy\\test\\settings.test.js' ]
+  }

@@ -64,12 +64,12 @@ Decisões do usuário para a v2:
 | 3.2 | P1 — respostas e Fase 3 | ✅ | respostas `1A 2A 3A 4A`; na Fase 3: lote C `1A` (checkpoint + worktree temporária) e design de autenticação `2A` (token assinado no `/login`). Veredito VALIDADO (V1+V4); 0 CRITICAL/HIGH residuais; testes 23 → 51 (28 de prova: 9 unidade, 19 integração, todos vermelhos no original); execução local autenticada com 52 requisições (E-03 × E-07) |
 | 3.3 | P1 — commit | ✅ | ver registro |
 | 3.4 | P1 — validação independente (subagente) | ✅ | APROVADO com ressalvas não bloqueantes ([validação](validacoes/validacao-project-1_2026-11-16_v3.md)): 51 passed reexecutado; 28 provas vermelhas no original; app subida com credenciais geradas (401 sem token, 200 com token, `/admin/query` 404); 31 referências de linha conferidas. Ressalvas: `Infinity`/`NaN` em `POST /produtos` ⇒ 500; README do projeto não atualizado; fragmentos de segredo antigo em E-08 (saída de assert, mantida sem edição para preservar a evidência bruta); cabeçalho E-nn incompleto em E-03/E-06/E-07 |
-| 3.5 | P2 ecommerce-api-legacy — Fases 1 e 2 (pausa) | 🔄 | executor: subagente sem contexto prévio |
-| 3.6 | P2 — respostas e Fase 3 | ⏳ | |
-| 3.7 | P2 — commit | ⏳ | |
-| 3.8 | P2 — validação independente (subagente) | ⏳ | |
-| 3.9 | P3 task-manager-api — Fases 1 e 2 (pausa) | ⏳ | |
-| 3.10 | P3 — respostas e Fase 3 | ⏳ | |
+| 3.5 | P2 ecommerce-api-legacy — Fases 1 e 2 (pausa) | ✅ | Run id 20261116-213657; 25 findings (6 C / 7 H / 7 M / 5 L); pagamento simulado (F-002, SEC-14) com correção P-20 em todas as opções; asterisco de Manter contrato*: "1 CRITICAL (F-003) e 1 HIGH (F-008) ficarão sem correção; exige segunda confirmação" |
+| 3.6 | P2 — respostas e Fase 3 | ✅ | respostas `1A 2A 3A 4A`; lote C aprovado; autenticação admin por `ADMIN_API_KEY` (nega tudo sem a variável). Veredito VALIDADO (V1+V3+V4); 0 CRITICAL/HIGH residuais; testes 8 → 33 (25 de prova: 18 unidade, 7 integração); execução local autenticada com 21 requisições (E-04 × E-08), 0 divergentes |
+| 3.7 | P2 — commit | ✅ | ver registro |
+| 3.8 | P2 — validação independente (subagente) | 🔄 | |
+| 3.9 | P3 task-manager-api — Fases 1 e 2 (pausa) | ✅ | Run id 20261116-214549; 28 findings (7 C / 4 H / 11 M / 6 L); asterisco de Manter contrato*: "3 CRITICAL (F-002, F-006, F-007) e 0 HIGH ficarão sem correção"; execução interrompida por limite de uso da API e retomada em 2026-11-18 |
+| 3.10 | P3 — respostas e Fase 3 | 🔄 | respostas `1A 2A 3A 4A` |
 | 3.11 | P3 — commit | ⏳ | |
 | 3.12 | P3 — validação independente (subagente) | ⏳ | |
 

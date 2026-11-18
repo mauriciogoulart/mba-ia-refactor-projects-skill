@@ -1,0 +1,33 @@
+### E-07 · V3 boot (npm start) + checkouts de api.http (após refatoração)
+Comando:      node TMP/v3-colecao.js ecommerce-api-legacy (APP_ENV=test PAYMENT_PROVIDER=mock PAYMENT_MOCK_APPROVED_PREFIXES=4)
+Diretório:    ecommerce-api-legacy
+Origem:       K-03 · README.md:9; package.json:7; api.http:3-25 · Classe B · Autorização: automática (classe B)
+Início/Fim:   2026-11-18T19:30:07-03:00 → 2026-11-18T19:30:09-03:00 (duração 2 s)        Exit code: 0
+Ambiente:     Node v24.11.1, npm 11.6.4, express 4.22.1, sqlite3 5.1.7, Windows 11
+Resultado:    comparar com E-03 (200 {msg,enrollment_id}; 400 Pagamento recusado)
+Saída capturada (segredos mascarados):
+boot: ok em 772ms
+log de boot:
+  
+  > desafio-arquitetura-ia-boilerplate@1.0.0 start
+  > node src/app.js
+  
+  {"time":"2026-11-18T22:30:08.295Z","level":"warn","msg":"SEED_USER_PASSWORD não definida: usuário de seed criado com senha aleatória"}
+  {"time":"2026-11-18T22:30:08.332Z","level":"warn","msg":"ADMIN_API_KEY não definida: rotas administrativas negam todas as requisições"}
+  {"time":"2026-11-18T22:30:08.337Z","level":"info","msg":"LMS API rodando na porta 3000"}
+  
+POST /api/checkout | Checkout - sucesso (api.http:3-13) | status 200 | {msg,enrollment_id} | 117ms
+POST /api/checkout | Checkout - pagamento recusado (api.http:15-25) | status 400 | texto "Pagamento recusado" | 4ms
+porta 3000 liberada: true
+log completo da aplicação (mascarado):
+  
+  > desafio-arquitetura-ia-boilerplate@1.0.0 start
+  > node src/app.js
+  
+  {"time":"2026-11-18T22:30:08.295Z","level":"warn","msg":"SEED_USER_PASSWORD não definida: usuário de seed criado com senha aleatória"}
+  {"time":"2026-11-18T22:30:08.332Z","level":"warn","msg":"ADMIN_API_KEY não definida: rotas administrativas negam todas as requisições"}
+  {"time":"2026-11-18T22:30:08.337Z","level":"info","msg":"LMS API rodando na porta 3000"}
+  {"time":"2026-11-18T22:30:08.441Z","level":"info","msg":"pagamento MOCK (ambiente de teste)","last4":"4444","amountCents":49700,"approved":true}
+  {"time":"2026-11-18T22:30:08.474Z","level":"info","msg":"checkout concluído","userId":2,"courseId":2,"enrollmentId":2,"last4":"4444"}
+  {"time":"2026-11-18T22:30:08.485Z","level":"info","msg":"pagamento MOCK (ambiente de teste)","last4":"4444","amountCents":99700,"approved":false}
+  

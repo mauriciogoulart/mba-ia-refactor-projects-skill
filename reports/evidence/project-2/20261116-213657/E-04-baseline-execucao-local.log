@@ -1,0 +1,42 @@
+### E-04 · V4 execução local autenticada (baseline, código original na cópia do checkpoint)
+Comando:      node TMP/v4-execucao-local.js TMP/checkpoint/ecommerce-api-legacy baseline   (TMP = diretório temporário da execução, fora do repositório)
+Diretório:    TMP/checkpoint/ecommerce-api-legacy (worktree do checkpoint refactor-arch/checkpoint-20261116-213657)
+Origem:       K-05 · política 07 §5 / 06 §5.1 · Classe B (banco em memória desta execução; DELETE/admin só nele) · Autorização: P4 = Sim, incluindo escrita
+Início/Fim:   2026-11-16T21:48:22-03:00 → 2026-11-16T21:48:24-03:00 (duração 2 s)        Exit code: 0
+Ambiente:     Node v24.11.1; SQLite em memória; porta 3000; variáveis de teste geradas por execução (ignoradas pelo código original)
+Resultado:    21 requisições; original: tudo 200 sem credencial; senha ignorada; JSON malformado devolve stack; card numérico derruba o processo (18-19 sem resposta); sem provedor aprova (20)
+Saída capturada (segredos mascarados):
+modo=baseline | banco: SQLite em memória (descartável, recriado no boot) | porta 3000
+credenciais geradas nesta execução: ADMIN_API_KEY=xuf8*** SEED_USER_PASSWORD=guf5*** PAYMENT_GATEWAY_KEY=test*** | senha usada para o usuário de seed: ***
+ambiente: APP_ENV=test PAYMENT_PROVIDER=mock PAYMENT_MOCK_APPROVED_PREFIXES=4
+[parte A] boot: ok
+01 | GET /api/admin/financial-report | cred=sem | status 200 | array[2] [{"course":"Docker","revenue":0,"students":[]},{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]}] | x-powered-by=Express nosniff=- | 65ms
+02 | GET /api/admin/financial-report | cred=inválida | status 200 | array[2] [{"course":"Docker","revenue":0,"students":[]},{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]}] | x-powered-by=Express nosniff=- | 4ms
+03 | GET /api/admin/financial-report | cred=admin | status 200 | array[2] [{"course":"Docker","revenue":0,"students":[]},{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]}] | x-powered-by=Express nosniff=- | 3ms
+04 | POST /api/checkout | cred=sem | status 400 | texto "Bad Request" | x-powered-by=Express nosniff=- | 17ms
+05 | POST /api/checkout | cred=sem | status 404 | texto "Curso não encontrado" | x-powered-by=Express nosniff=- | 3ms
+06 | POST /api/checkout | cred=sem | status 400 | texto "Pagamento recusado" | x-powered-by=Express nosniff=- | 10ms
+07 | POST /api/checkout | cred=sem | status 200 | {msg,enrollment_id} | x-powered-by=Express nosniff=- | 7ms
+08 | POST /api/checkout | cred=senha correta (seed) | status 200 | {msg,enrollment_id} | x-powered-by=Express nosniff=- | 4ms
+09 | POST /api/checkout | cred=senha errada | status 200 | {msg,enrollment_id} | x-powered-by=Express nosniff=- | 3ms
+10 | POST /api/checkout | cred=sem senha | status 200 | {msg,enrollment_id} | x-powered-by=Express nosniff=- | 3ms
+11 | GET /api/admin/financial-report | cred=admin | status 200 | array[2] [{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]},{"course":"Docker","revenue":1988,"students":[{"student":"Sintetico","paid":497},{"student":"Leonan","paid":497},{"student":"Leo | x-powered-by=Express nosniff=- | 3ms
+12 | POST /api/checkout | cred=sem | status 400 | texto "<!DOCTYPE html> <html lang="en"> <head> <meta charset="utf-8"> <title>…" [contém stack trace] | x-powered-by=Express nosniff=nosniff | 2ms
+13 | DELETE /api/users/999 | cred=sem | status 200 | texto "Usuário deletado, mas as matrículas e pagamentos ficaram sujos no banc…" | x-powered-by=Express nosniff=- | 1ms
+14 | DELETE /api/users/1 | cred=inválida | status 200 | texto "Usuário deletado, mas as matrículas e pagamentos ficaram sujos no banc…" | x-powered-by=Express nosniff=- | 1ms
+15 | DELETE /api/users/999 | cred=admin | status 200 | texto "Usuário deletado, mas as matrículas e pagamentos ficaram sujos no banc…" | x-powered-by=Express nosniff=- | 1ms
+16 | DELETE /api/users/1 | cred=admin | status 200 | texto "Usuário deletado, mas as matrículas e pagamentos ficaram sujos no banc…" | x-powered-by=Express nosniff=- | 1ms
+17 | GET /api/admin/financial-report | cred=admin | status 200 | array[2] [{"course":"Clean Architecture","revenue":997,"students":[{"student":"Unknown","paid":997}]},{"course":"Docker","revenue":1988,"students":[{"student":"Sintetico","paid":497},{"student":"Unknown","paid":497},{"student":"U | x-powered-by=Express nosniff=- | 2ms
+18 | POST /api/checkout | cred=sem | SEM RESPOSTA (ECONNRESET) | 10ms
+19 | GET /api/admin/financial-report | cred=admin | SEM RESPOSTA (ECONNRESET) | 2ms
+[parte A] log contém número completo de cartão: true | log contém a chave do gateway: false | log contém senha de seed: false
+[parte A] processo vivo ao final: false
+[parte A] porta liberada após encerrar: true
+[parte A] linhas relevantes do log (mascaradas):
+    Frankenstein LMS rodando na porta 3000...
+    SyntaxError: Expected double-quoted property name in JSON at position 12 (line 1 column 13)
+    TypeError: cc.startsWith is not a function
+[parte B] boot sem PAYMENT_PROVIDER: ok
+20 | POST /api/checkout | cred=sem | status 200 | {msg,enrollment_id} | x-powered-by=Express nosniff=- | 29ms
+21 | GET /api/admin/financial-report | cred=admin | status 200 | array[2] [{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]},{"course":"Docker","revenue":497,"students":[{"student":"Sintetico","paid":497}]}] | x-powered-by=Express nosniff=- | 4ms
+[parte B] porta liberada após encerrar: true

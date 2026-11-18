@@ -1,0 +1,23 @@
+Reauditoria do catálogo sobre o código refatorado — 2026-11-18T22:30:52.096Z
+Arquivos-fonte: 28
+[SEC-01 SQL montado por interpolação/concatenação] /\.(run|get|all)\(\s*(`[^`]*\$\{|["'][^"']*["']\s*\+)/ => 0 ocorrência(s)
+[SEC-02 segredos literais] /pk_live_|senha_super|dbPass|paymentGatewayKey\s*:/ => 0 ocorrência(s)
+[SEC-03 rotas sem requireAdmin (admin/users)] /app\.(get|delete)\('\/api\/(admin|users)[^']*', (?!requireAdmin)/ => 0 ocorrência(s)
+[SEC-04 execução arbitrária] /\beval\(|new Function|child_process/ => 0 ocorrência(s)
+[SEC-06 hash fraco ou senha padrão] /badCrypto|\.substring\(0, 2\)|123456|createHash\('(md5|sha1)'\)/ => 0 ocorrência(s)
+[SEC-08 dado sensível em log] /logger\.\w+\(.*(cardNumber\b(?!\))|password|adminApiKey|paymentApiKey)/ => 0 ocorrência(s)
+[SEC-14 heurística de pagamento fora do mock] /startsWith\(/ (exceto /gatewayFactory\.js$/) => 0 ocorrência(s)
+[ARC-03 estado global mutável] /globalCache|totalRevenue|^let / => 0 ocorrência(s)
+[ARC-04 infraestrutura instanciada fora do composition root] /new sqlite3|openDatabase\(/ (exceto /(src\/app|database\/connection)\.js$/) => 0 ocorrência(s)
+[ARC-05 contadores manuais] /Pending--|coursesPending|enrPending/ => 0 ocorrência(s)
+[ARC-07/ARC-11 SELECT *] /SELECT \*/ => 0 ocorrência(s)
+[ARC-12 dinheiro em REAL] /\bREAL\b/ => 0 ocorrência(s)
+[Camadas: SQL fora de models/database] /SELECT |INSERT INTO|DELETE FROM/ (exceto /src\/(models|database)\//) => 0 ocorrência(s)
+[Camadas: HTTP em services/models] /require\('express'\)|\breq\.|\bres\./ (exceto /src\/(app\.js|controllers|middlewares|routes|utils)/) => 0 ocorrência(s)
+[QLT-03 AppManager/utils antigos] /AppManager|require\('\.\/utils'\)/ => 0 ocorrência(s)
+[QLT-04 console.*] /console\.(log|warn|error)/ => 0 ocorrência(s)
+[QLT-05 const self] /const self/ => 0 ocorrência(s)
+--- Maiores arquivos
+    78  src/app.js
+    66  src/database/connection.js
+    56  src/database/schema.js
