@@ -46,11 +46,14 @@ def test_health(api):
 # ---------- login ----------
 
 def test_login_sucesso(api):
-    r = api.post("/login", {"email": "joao@email.com", "password": "1234"})
+    r = api.post("/login", {"email": "joao@email.com", "password": api.senha_admin})
     assert r.status_code == 200
     corpo = r.json()
     assert corpo["user"]["email"] == "joao@email.com"
-    assert corpo["token"] == "fake-jwt-token-" + str(corpo["user"]["id"])
+    assert corpo["token"]
+    assert corpo["token"] != "fake-jwt-token-" + str(corpo["user"]["id"])
+    cabecalho = {"Authorization": "Bearer " + corpo["token"]}
+    assert api.anonimo.get("/tasks", headers=cabecalho).status_code == 200
 
 
 def test_login_credenciais_invalidas(api):

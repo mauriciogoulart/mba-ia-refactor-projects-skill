@@ -1,0 +1,91 @@
+E-00 · Fase 1 — Análise do projeto (somente leitura)
+Run: 2026-11-16T21:45:49-03:00   Run id: 20261116-214549
+Projeto: task-manager-api (Path: task-manager-api)
+
+================================
+PHASE 1: PROJECT ANALYSIS
+================================
+Language:      Python 3.14.0 (.venv/pyvenv.cfg; nenhum python_requires declarado)
+Framework:     Flask 3.0.0 (confiança: alta)
+Dependencies:  flask-sqlalchemy 3.1.1 (SQLAlchemy 2.1.8 no .venv), flask-cors 4.0.0, marshmallow 3.20.1 (não importado), requests 2.31.0 (só nos testes), python-dotenv 1.0.0 (não importado); dev: pytest>=8.0
+Domain:        API de gerenciamento de tarefas (tasks, usuários, categorias e relatórios de produtividade)
+Architecture:  parcialmente-em-camadas — models/ separados, mas as rotas acumulam controller + regra + acesso a dados; services/ e utils/ não usados; CRUD de categorias dentro do módulo de relatórios
+Source files:  15 files analyzed (~1158 lines)
+DB tables:     users, tasks, categories (SQLite local `sqlite:///tasks.db` → instance/tasks.db)
+Entry point:   app.py — `python app.py` (README.md:10); seed: `python seed.py` (README.md:9)
+Routes found:  22 (5 administrativas/destrutivas)
+Validation:    tests: unit=não integration=sim e2e=não | run-docs=sim | scripts=não | api-collection=não
+================================
+
+## Arquivos-fonte contados (método: `wc -l` no Git Bash sobre os .py versionados, excluindo tests/)
+app.py                             34
+database.py                         3
+models/__init__.py                  3
+models/category.py                 21
+models/task.py                     60
+models/user.py                     38
+routes/__init__.py                  1
+routes/report_routes.py           223
+routes/task_routes.py             299
+routes/user_routes.py             211
+seed.py                            99
+services/__init__.py                1
+services/notification_service.py   48
+utils/__init__.py                   1
+utils/helpers.py                  116
+TOTAL                            1158  (15 arquivos)
+Testes (fora da contagem): tests/conftest.py 103, tests/test_api.py 283
+Ignorados: .venv/, .pytest_cache/, instance/tasks.db (banco local), .claude/ (skill)
+
+## Rotas encontradas (método, caminho, handler)
+GET    /                          app.py:27  index
+GET    /health                    app.py:23  health
+GET    /tasks                     routes/task_routes.py:12  get_tasks
+GET    /tasks/<int:task_id>       routes/task_routes.py:66  get_task
+POST   /tasks                     routes/task_routes.py:86  create_task
+PUT    /tasks/<int:task_id>       routes/task_routes.py:157 update_task
+DELETE /tasks/<int:task_id>       routes/task_routes.py:226 delete_task          [destrutiva]
+GET    /tasks/search              routes/task_routes.py:241 search_tasks
+GET    /tasks/stats               routes/task_routes.py:274 task_stats
+GET    /users                     routes/user_routes.py:11  get_users
+GET    /users/<int:user_id>       routes/user_routes.py:28  get_user
+POST   /users                     routes/user_routes.py:43  create_user          [administrativa: aceita role]
+PUT    /users/<int:user_id>       routes/user_routes.py:93  update_user          [administrativa: altera role/active]
+DELETE /users/<int:user_id>       routes/user_routes.py:135 delete_user          [destrutiva: apaga tasks em cascata]
+GET    /users/<int:user_id>/tasks routes/user_routes.py:154 get_user_tasks
+POST   /login                     routes/user_routes.py:186 login
+GET    /reports/summary           routes/report_routes.py:13  summary_report
+GET    /reports/user/<int:user_id> routes/report_routes.py:104 user_report
+GET    /categories                routes/report_routes.py:158 get_categories
+POST   /categories                routes/report_routes.py:168 create_category
+PUT    /categories/<int:cat_id>   routes/report_routes.py:191 update_category
+DELETE /categories/<int:cat_id>   routes/report_routes.py:212 delete_category      [destrutiva]
+Nenhuma rota verifica identidade (nenhum decorador/middleware de autenticação; token de login é 'fake-jwt-token-' + id e nunca é verificado).
+
+## Papéis por arquivo
+app.py: entrypoint + config (URI, SECRET_KEY) + rotas (/health, /) + criação de schema (db.create_all) — 4 papéis
+database.py: acesso a dados (instância SQLAlchemy)
+models/*.py: model/acesso a dados + regra (Task.is_overdue, User.set_password) + serialização (to_dict)
+routes/task_routes.py: rotas + controller + regra (overdue, stats, validação) + acesso a dados (queries/commit) — 4 papéis
+routes/user_routes.py: rotas + controller + regra (validação, cascata) + acesso a dados + autenticação (login) — 5 papéis
+routes/report_routes.py: rotas + controller + regra (agregações) + acesso a dados; dois domínios (relatórios e CRUD de categorias)
+services/notification_service.py: service (SMTP) — nunca instanciado (código morto)
+utils/helpers.py: util — só format_date/calculate_percentage são importados (report_routes.py:7) e nenhum é chamado
+seed.py: script de carga (destrutivo: apaga as 3 tabelas)
+
+## Inventário de validação
+Testes: tests/test_api.py (25 testes), runner pytest (pytest.ini: testpaths=tests), dependência requirements-dev.txt (pytest>=8.0)
+Tipo: integração caixa-preta via HTTP (tests/conftest.py copia o projeto para tmp, roda `python seed.py` e `python app.py`, porta fixa 5000, usa requests)
+Instruções: README.md:7-11 (pip install, python seed.py, python app.py); nenhuma instrução de testes; sem CI, Makefile ou scripts
+Coleções de requisição: nenhuma (.http/Postman/OpenAPI ausentes)
+UI/screenshot: não aplicável (API JSON)
+Credenciais de teste: seed.py:16-35 (senhas literais; admin joao@email.com); POST /users é cadastro público; POST /login devolve token falso
+
+## Comandos descobertos (classe conforme 07)
+Instalar: `pip install -r requirements.txt` (README.md:8) — C; dev: `pip install -r requirements-dev.txt` — C (dependências já presentes no .venv)
+Seed: `python seed.py` (README.md:9) — D sobre o banco do projeto (apaga users/tasks/categories); B só em cópia descartável
+Subir: `python app.py` (README.md:10; app.py:33-34) — B (porta 5000, host 0.0.0.0, debug=True)
+Testes: `python -m pytest` (pytest.ini) — B (roda em cópia temporária do projeto)
+Compilar/checar: nenhum script do projeto; toolchain `python -B -c "import ast..."`/import — B
+Porta/URL: 5000 (app.py:34; README.md:13); saúde: GET /health (app.py:22)
+SO/shell: Windows 11, Git Bash + PowerShell
