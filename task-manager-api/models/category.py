@@ -1,4 +1,4 @@
-from database import db
+from database import db, get_by_id
 from models.constants import DEFAULT_COLOR
 from utils.clock import utcnow
 
@@ -14,7 +14,7 @@ class Category(db.Model):
 
     @classmethod
     def find(cls, category_id):
-        return db.session.get(cls, category_id)
+        return get_by_id(cls, category_id)
 
     @classmethod
     def list_page(cls, limit, offset):

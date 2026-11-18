@@ -1,0 +1,13 @@
+﻿Comando:    python app.py (cópia descartável, ambiente de teste)
+Diretório:  exec-p3\final\app
+Origem:     K-03 · README.md:10 · Classe B
+------------------------------------------------------------
+Seed concluído com sucesso!
+  3 usuários
+  4 categorias
+  10 tasks
+ * Serving Flask app 'app'
+ * Debug mode: off
+2026-11-18 20:02:38,001 INFO werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-11-18 20:02:38,001 INFO werkzeug: [33mPress CTRL+C to quit[0m

@@ -15,33 +15,46 @@ def completion_rate(completed, total):
     return round((completed / total) * 100, 2) if total > 0 else 0
 
 
-def _reference_exists(model, reference_id):
-    return isinstance(reference_id, (int, str)) and model.find(reference_id) is not None
-
-
 def _ensure_references(fields):
-    if fields.get('user_id') and not _reference_exists(User, fields['user_id']):
+    if fields.get('user_id') and User.find(fields['user_id']) is None:
         raise AppError('Usuário não encontrado', 404)
-    if fields.get('category_id') and not _reference_exists(Category, fields['category_id']):
+    if fields.get('category_id') and Category.find(fields['category_id']) is None:
         raise AppError('Categoria não encontrada', 404)
 
 
-def list_tasks(limit, offset):
-    return Task.list_page(limit, offset)
+def _ensure_can_assign(assignee_id, actor):
+    """Somente a gestão atribui tasks a terceiros ou as deixa sem responsável."""
+    if assignee_id != actor.id and not actor.is_staff():
+        raise AppError('Sem permissão', 403)
 
 
-def search_tasks(filters, limit, offset):
-    return Task.search(limit=limit, offset=offset, **filters)
+def list_tasks(limit, offset, actor):
+    return Task.list_page(limit, offset, owner_id=actor.task_scope())
 
 
-def get_task(task_id):
+def search_tasks(filters, limit, offset, actor):
+    return Task.search(limit=limit, offset=offset, owner_id=actor.task_scope(), **filters)
+
+
+def _find_task(task_id):
     task = Task.find(task_id)
     if not task:
         raise AppError('Task não encontrada', 404)
     return task
 
 
-def create_task(fields):
+def get_accessible_task(task_id, actor):
+    """Devolve a task se o chamador for o responsável por ela ou tiver perfil de gestão."""
+    task = _find_task(task_id)
+    if task.user_id != actor.id and not actor.is_staff():
+        raise AppError('Sem permissão', 403)
+    return task
+
+
+def create_task(fields, actor):
+    if not actor.is_staff():
+        _ensure_can_assign(fields['user_id'] or actor.id, actor)
+        fields = {**fields, 'user_id': actor.id}
     _ensure_references(fields)
     task = Task(**fields)
     save(task, 'Erro ao criar task')
@@ -49,15 +62,9 @@ def create_task(fields):
     return task
 
 
-def get_task_for_change(task_id, actor):
-    """Devolve a task se o chamador for o responsável por ela ou tiver perfil de gestão."""
-    task = get_task(task_id)
-    if task.user_id != actor.id and not actor.is_staff():
-        raise AppError('Sem permissão', 403)
-    return task
-
-
-def update_task(task, fields):
+def update_task(task, fields, actor):
+    if 'user_id' in fields:
+        _ensure_can_assign(fields['user_id'], actor)
     _ensure_references(fields)
     for name, value in fields.items():
         setattr(task, name, value)
@@ -73,9 +80,9 @@ def delete_task(task):
     logger.info('Task deletada task_id=%s', task_id)
 
 
-def get_stats():
-    total = Task.count_all()
-    by_status = Task.count_by_status()
+def get_stats(owner_id=None):
+    total = Task.count_all(owner_id)
+    by_status = Task.count_by_status(owner_id)
     done = by_status.get(STATUS_DONE, 0)
     return {
         'total': total,
@@ -83,6 +90,6 @@ def get_stats():
         'in_progress': by_status.get(STATUS_IN_PROGRESS, 0),
         'done': done,
         'cancelled': by_status.get(STATUS_CANCELLED, 0),
-        'overdue': len(Task.list_overdue()),
+        'overdue': len(Task.list_overdue(owner_id)),
         'completion_rate': completion_rate(done, total),
     }

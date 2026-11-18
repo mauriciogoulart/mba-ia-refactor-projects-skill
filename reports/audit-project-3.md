@@ -443,6 +443,7 @@ Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]
 - Contrato: Refatorar (`3A`) — CT-01 a CT-08 aplicados; CT-09 aprovado na reauditoria (`Q3A`)
 - Execução local autenticada (P4): incluindo escrita em banco descartável (`4A`)
 - Mecanismo de identidade (P-05): token assinado com expiração emitido por `POST /login`, com `itsdangerous` e perfis (`Q2A`)
+- Correção pós-validação independente: a validação independente reprovou a primeira versão do F-029 por correção parcial; a conclusão foi aplicada dentro da C-17 / CT-09 já aprovada, com evidências novas E-10 a E-17
 
 ### Finding surgido na reauditoria (aprovado na pergunta Q3)
 
@@ -454,6 +455,7 @@ Evidência: usuário recém-cadastrado por `POST /users` (público, perfil `user
 Description: na Fase 2 o SEC-11 foi descartado porque não havia identidade no fluxo. A autenticação introduzida por C-09 criou essa identidade, e a reauditoria mostrou que faltava confrontá-la com o dono do recurso.
 Impact: qualquer pessoa podia se cadastrar, obter token e ler e-mails de terceiros, além de alterar ou remover tasks alheias.
 Recommendation: aplicada em C-17 / CT-09 (Playbook P-05, autorização de propriedade).
+Complemento da validação independente: a primeira versão protegia `GET /users/<id>/tasks`, mas as mesmas tasks seguiam acessíveis por `GET /tasks`, `GET /tasks/<id>` e `GET /tasks/search?user_id=<id>`, e um usuário comum podia atribuir ou transferir tasks a terceiros. Todas as leituras e atribuições foram corrigidas (E-11 a E-15).
 
 ## Estrutura DEPOIS
 ```
@@ -470,16 +472,16 @@ task-manager-api/
 ├── controllers/            # auth, task, user, category, report
 ├── routes/                 # task, user, category, report, system
 ├── middleware/             # auth, error_handler, security
-├── utils/                  # clock, errors
+├── utils/                  # clock, errors, limits
 └── tests/                  # conftest, test_api, test_seguranca, test_unidade
 ```
 
 | Métrica | ANTES | DEPOIS |
 |---|---|---|
-| Arquivos-fonte | 15 | 44 |
-| Linhas de código (aprox.) | ~1158 | ~1486 |
+| Arquivos-fonte | 15 | 45 |
+| Linhas de código (aprox.) | ~1158 | ~1550 |
 | Camadas presentes | entrypoint/config, rotas+controllers, models, service e util não usados | config, models, views, validators, services, controllers, routes, middleware, composition root |
-| Maior arquivo | routes/task_routes.py (299) | validators/task_validator.py (113) |
+| Maior arquivo | routes/task_routes.py (299) | validators/task_validator.py (136) |
 | Arquivos com 3+ papéis | 4 | 0 |
 
 ### Mapa antigo → novo
@@ -501,7 +503,7 @@ task-manager-api/
 |---|---|---|
 | C-01 | aplicada | config/settings.py; chave efêmera fora de produção; `APP_ENV=production` exige `SECRET_KEY` e proíbe debug |
 | C-02 | aplicada | senhas de seed via `SEED_*_PASSWORD`; aleatórias e não exibidas quando ausentes |
-| C-03 | aplicada | `marshmallow` removido; `requests` movido para requirements-dev.txt; versões não atualizadas |
+| C-03 | aplicada | `marshmallow` removido; `requests` movido para requirements-dev.txt; `sqlalchemy`, `werkzeug` e `itsdangerous`, importados diretamente, declarados nas versões já instaladas no .venv (validação independente); nada foi instalado |
 | C-04 | aplicada | constantes, `Task.is_overdue` único, consultas nos models |
 | C-05 | aplicada | `werkzeug.security` e migração de MD5 legado na primeira conferência válida |
 | C-06 | aplicada | services, controllers finos e categorias em módulo próprio |
@@ -515,69 +517,85 @@ task-manager-api/
 | C-14 | aplicada | cabeçalhos de segurança, limite de falhas de login (429) e CORS restrito |
 | C-15 | aplicada | utils/clock.py e `db.session.get` |
 | C-16 | aplicada | código morto removido |
-| C-17 | aplicada (incluída na reauditoria, `Q3A`) | autorização por responsável, próprio usuário e perfis de gestão |
+| C-17 | aplicada (incluída na reauditoria, `Q3A`; concluída após a validação independente) | leituras e alterações de tasks restritas ao responsável e à gestão; listagem, busca, estatísticas e `task_count` de categorias limitados ao próprio usuário; atribuição a terceiros só pela gestão; `user_id`/`category_id` malformados ou fora da faixa ⇒ 400; ids gigantes na URL ⇒ 404 |
 
 ## Contratos — resultado
 | CT | Rota/campo | Antes → Depois | Por que (F-xxx, CWE/OWASP) | Impacto e como adaptar o cliente | Prova (E-nn) |
 |---|---|---|---|---|---|
-| CT-01 | rotas de dados | abertas → exigem `Authorization: Bearer <token>` (401) | F-002, F-006, CWE-306/A01 | enviar o token obtido em `POST /login` | E-03 verde; E-04 vermelho; E-05 |
-| CT-02 | `POST /login`, campo `token` | `fake-jwt-token-<id>` → token assinado, validade padrão de 1 h | F-002, CWE-306/A07 | tratar o token como valor opaco e renovar após expirar | E-03; E-04; E-05 |
-| CT-03 | campo `password` | hash devolvido → campo omitido | F-004, CWE-200/A02 | deixar de ler o campo | E-03; E-04; E-05 |
-| CT-04 | `POST /users`, `PUT /users/<id>` | `role`/`active` livres → só admin (403); edição só pelo próprio ou admin | F-007, CWE-915/A01 | promoções exigem token de admin | E-03; E-04; E-05 |
-| CT-05 | `DELETE /users/<id>`, `DELETE /categories/<id>` | abertas → só admin (403) | F-006, CWE-306/A01 | usar token de admin | E-03; E-04; E-05 |
-| CT-06 | CORS | qualquer origem → só `CORS_ORIGINS` (padrão: nenhuma) | F-002, F-012, CWE-942/A05 | configurar as origens dos front-ends | E-03; E-04; E-05 |
-| CT-07 | `PUT /users/<id>`, `POST`/`PUT /categories` | valores inválidos gravados → 400 | F-014, CWE-20/A03 | enviar nome não vazio, `active` booleano, e-mail com domínio completo e cor `#RRGGBB` | E-03; E-04; E-05 |
-| CT-08 | `GET /tasks`, `/tasks/search`, `/users`, `/categories` | carga total → até 100 itens, com `limit`/`offset` | F-018, CWE-770/A05 | paginar listas com mais de 100 itens | E-03; E-04; E-05 |
-| CT-09 | `PUT`/`DELETE /tasks/<id>`; `GET /users/<id>`, `/users/<id>/tasks`, `/reports/user/<id>`; `GET /users`, `/reports/summary` | qualquer autenticado → responsável, próprio usuário ou gestão, conforme a rota (403) | F-029, CWE-639/A01 | usar conta do responsável ou perfil `admin`/`manager` | E-03; E-04; E-05 |
+| CT-01 | rotas de dados | abertas → exigem `Authorization: Bearer <token>` (401) | F-002, F-006, CWE-306/A01 | enviar o token obtido em `POST /login` | E-11 verde; E-12 vermelho; E-13 |
+| CT-02 | `POST /login`, campo `token` | `fake-jwt-token-<id>` → token assinado, validade padrão de 1 h | F-002, CWE-306/A07 | tratar o token como valor opaco e renovar após expirar | E-11; E-12; E-13 |
+| CT-03 | campo `password` | hash devolvido → campo omitido | F-004, CWE-200/A02 | deixar de ler o campo | E-11; E-12; E-13 |
+| CT-04 | `POST /users`, `PUT /users/<id>` | `role`/`active` livres → só admin (403); edição só pelo próprio ou admin | F-007, CWE-915/A01 | promoções exigem token de admin | E-11; E-12; E-13 |
+| CT-05 | `DELETE /users/<id>`, `DELETE /categories/<id>` | abertas → só admin (403) | F-006, CWE-306/A01 | usar token de admin | E-11; E-12; E-13 |
+| CT-06 | CORS | qualquer origem → só `CORS_ORIGINS` (padrão: nenhuma) | F-002, F-012, CWE-942/A05 | configurar as origens dos front-ends | E-11; E-12; E-13 |
+| CT-07 | `PUT /users/<id>`, `POST`/`PUT /categories` | valores inválidos gravados → 400 | F-014, CWE-20/A03 | enviar nome não vazio, `active` booleano, e-mail com domínio completo e cor `#RRGGBB` | E-11; E-12; E-13 |
+| CT-08 | `GET /tasks`, `/tasks/search`, `/users`, `/categories` | carga total → até 100 itens, com `limit`/`offset` | F-018, CWE-770/A05 | paginar listas com mais de 100 itens | E-11; E-12; E-13 |
+| CT-09 | `GET`/`PUT`/`DELETE /tasks/<id>`; `GET /tasks`, `/tasks/search`, `/tasks/stats`; `POST /tasks`; `GET /categories` (`task_count`); `GET /users/<id>`, `/users/<id>/tasks`, `/reports/user/<id>`; `GET /users`, `/reports/summary` | qualquer autenticado → responsável, próprio usuário ou gestão, conforme a rota: acesso direto alheio ⇒ 403; listagem, busca e contagens só com as próprias tasks; atribuir ou transferir a terceiro sem gestão ⇒ 403; task criada por usuário comum fica sob sua responsabilidade; referência malformada ⇒ 400 | F-029, CWE-639/A01 | usar a conta do responsável ou perfil `admin`/`manager` para visão geral e atribuição | E-11; E-12; E-13 |
 
 **Texto-base para o README (seção Resultados):** a refatoração alterou o acesso às rotas de dados, o formato do token de login, a resposta de usuários, o CORS, a validação e a paginação das listagens (CT-01 a CT-09). As mudanças corrigem falhas de autenticação, autorização e exposição de dados e foram aprovadas na rodada de perguntas do Run 20261116-214549; o CT-09 foi aprovado depois da reauditoria. Para usar a API, defina `SECRET_KEY` e `SEED_*_PASSWORD` (ver `.env.example`), rode `python seed.py`, obtenha o token em `POST /login` e envie `Authorization: Bearer <token>`. Testes: `pip install -r requirements-dev.txt` e `python -m pytest`. Justificativas e provas estão em `reports/audit-project-3.md` e `reports/evidence/project-3/20261116-214549/`.
 
 ## Alterações em testes
 | Teste | Motivo | Classe | Antes/Depois (trecho do diff) | Asserções | Reexecução | Snapshot |
 |---|---|---|---|---|---|---|
-| tests/conftest.py (fixture `api`, `Cliente`) | C-02, CT-01, CT-04, CT-05, CT-09 | T1 | senhas `SEED_*` e `SECRET_KEY` no ambiente; login de admin, usuário e gerente; `Authorization` por padrão | sem asserções de teste alteradas | E-03 | `tests-before/tests/conftest.py` |
-| tests/test_api.py::test_login_sucesso | C-02, CT-02 | T1 + T2 | `"1234"` → `api.senha_admin`; token previsível → token presente, diferente do previsível e aceito em rota protegida | reforçadas (de 3 para 5) | E-03 | `tests-before/tests/test_api.py` |
-| pytest.ini | testes de unidade importam módulos do projeto | T1 | `pythonpath = .` | n/a | E-03 | `tests-before/pytest.ini` |
+| tests/conftest.py (fixture `api`, `Cliente`) | C-02, CT-01, CT-04, CT-05, CT-09 | T1 | senhas `SEED_*` e `SECRET_KEY` no ambiente; login de admin, usuário e gerente; `Authorization` por padrão | sem asserções de teste alteradas | E-11 | `tests-before/tests/conftest.py` |
+| tests/test_api.py::test_login_sucesso | C-02, CT-02 | T1 + T2 | `"1234"` → `api.senha_admin`; token previsível → token presente, diferente do previsível e aceito em rota protegida | reforçadas (de 3 para 5) | E-11 | `tests-before/tests/test_api.py` |
+| pytest.ini | testes de unidade importam módulos do projeto | T1 | `pythonpath = .` | n/a | E-11 | `tests-before/pytest.ini` |
 
-Diff unificado: `E-09-diff-testes.patch`. Os outros 24 testes de `test_api.py` não foram editados; nenhum teste foi removido, pulado ou enfraquecido.
+| tests/test_unidade.py::test_listagem_limita_a_100_itens_por_padrao | CT-09 (tasks só visíveis ao responsável) | T1 | as 101 tasks do cenário passam a ter o usuário do teste como responsável | mantidas | E-11 | `tests-before-validacao/tests/test_unidade.py` |
+
+Diffs unificados: `E-09-diff-testes.patch` (primeira rodada) e `E-17-diff-testes.patch` (validação independente). Os outros 24 testes de `test_api.py` não foram editados; nenhum teste foi removido, pulado ou enfraquecido.
 
 ## Testes adicionados (provas)
 | Teste | Tipo | CT/F | O que comprova | Verde (código refatorado) | Vermelho (checkpoint original) |
 |---|---|---|---|---|---|
-| test_seguranca.py::test_rota_sem_token_retorna_401 (18 casos) | integração | CT-01 / F-002, F-006 | sem token ⇒ 401 | E-03 | E-04 |
-| test_seguranca.py::test_token_invalido_ou_forjado_retorna_401 (2) | integração | CT-02 / F-002 | token inválido ou forjado ⇒ 401 | E-03 | E-04 |
-| test_seguranca.py::test_token_valido_acessa_rota_protegida | integração | CT-01 | token válido ⇒ 200 | E-03 | controle positivo: passa no original |
-| test_seguranca.py::test_rotas_publicas_continuam_abertas | integração | CT-01 | `/` e `/health` seguem públicas | E-03 | controle positivo: passa no original |
-| test_seguranca.py::test_respostas_de_usuario_nao_trazem_password | integração | CT-03 / F-004 | campo ausente | E-03 | E-04 |
-| test_seguranca.py::test_cadastro_publico_cria_apenas_usuario_comum | integração | CT-04 / F-007 | `role=admin` sem admin ⇒ 403 | E-03 | E-04 |
-| test_seguranca.py::test_usuario_nao_altera_outro_usuario | integração | CT-04 / F-007 | edição de terceiro ⇒ 403 | E-03 | E-04 |
-| test_seguranca.py::test_usuario_edita_a_si_mesmo_sem_mudar_privilegio | integração | CT-04 / F-007 | autoedição ok; `role`/`active` ⇒ 403 | E-03 | E-04 |
-| test_seguranca.py::test_admin_altera_privilegio | integração | CT-04 | admin altera perfil | E-03 | controle positivo: passa no original |
-| test_seguranca.py::test_remover_usuario_exige_admin | integração | CT-05 / F-006 | 401, 403 e 200 por perfil | E-03 | E-04 |
-| test_seguranca.py::test_remover_categoria_exige_admin | integração | CT-05 / F-006 | 401, 403 e 200 por perfil | E-03 | E-04 |
-| test_seguranca.py::test_remover_task_exige_autenticacao | integração | CT-01 / F-006 | sem token ⇒ 401 | E-03 | E-04 |
-| test_seguranca.py::test_task_de_terceiro_nao_pode_ser_alterada_nem_removida | integração | CT-09 / F-029 | terceiro ⇒ 403 e task intacta | E-03 | E-04 |
-| test_seguranca.py::test_responsavel_e_gestao_alteram_a_task | integração | CT-09 | responsável e gerente ⇒ 200 | E-03 | controle positivo: passa no original |
-| test_seguranca.py::test_dados_de_usuario_so_para_o_proprio_ou_gestao (3) | integração | CT-09 / F-029 | terceiro ⇒ 403; próprio e gestão ⇒ 200 | E-03 | E-04 |
-| test_seguranca.py::test_visoes_gerais_so_para_gestao (2) | integração | CT-09 / F-029 | usuário comum ⇒ 403; gestão ⇒ 200 | E-03 | E-04 |
-| test_seguranca.py::test_cors_nao_libera_origem_externa | integração | CT-06 / F-002 | origem externa sem liberação | E-03 | E-04 |
-| test_seguranca.py::test_cabecalhos_de_seguranca_presentes | integração | F-012 | cabeçalhos presentes | E-03 | E-04 |
-| test_seguranca.py::test_login_bloqueia_apos_falhas_repetidas | integração | F-012 | 5 falhas ⇒ 429 | E-03 | E-04 |
-| test_seguranca.py::test_atualizar_usuario_rejeita_valor_invalido (3) | integração | CT-07 / F-014 | valores inválidos ⇒ 400 | E-03 | E-04 |
-| test_seguranca.py::test_categoria_rejeita_cor_e_nome_invalidos | integração | CT-07 / F-014 | valores inválidos ⇒ 400 | E-03 | E-04 |
-| test_seguranca.py::test_tipos_invalidos_retornam_400 | integração | F-014, F-015 | tipo inválido ⇒ 400 | E-03 | E-04 |
-| test_seguranca.py::test_paginacao_das_listagens | integração | CT-08 / F-018 | `limit`/`offset` | E-03 | E-04 |
-| test_seguranca.py::test_log_do_servidor_nao_registra_dados_pessoais | integração | F-008 | nome e e-mail fora do log | E-03 | E-04 |
-| test_seguranca.py::test_senha_literal_antiga_do_seed_nao_funciona | integração | F-009 | senha antiga ⇒ 401 | E-03 | E-04 |
-| test_unidade.py (configuração, 4 testes) | unidade | F-001, F-003 | padrões seguros e segredos fora do fonte | E-03 | E-04 |
-| test_unidade.py (senha, 2 testes) | unidade | F-005 | KDF com salt e migração de MD5 | E-03 | E-04 |
-| test_unidade.py (token e limite, 2 testes) | unidade | F-002, F-012 | adulteração, expiração e janela de bloqueio | E-03 | E-04 |
-| test_unidade.py (camadas e paginação, 4 testes) | unidade | F-010, F-011, F-016, CT-08 | regra no service, módulo próprio, vínculo e limite de 100 | E-03 | E-04 (erro de fixture: `create_app` não existe no original) |
+| test_seguranca.py::test_rota_sem_token_retorna_401 (18 casos) | integração | CT-01 / F-002, F-006 | sem token ⇒ 401 | E-11 | E-12 |
+| test_seguranca.py::test_token_invalido_ou_forjado_retorna_401 (2) | integração | CT-02 / F-002 | token inválido ou forjado ⇒ 401 | E-11 | E-12 |
+| test_seguranca.py::test_token_valido_acessa_rota_protegida | integração | CT-01 | token válido ⇒ 200 | E-11 | controle positivo: passa no original |
+| test_seguranca.py::test_rotas_publicas_continuam_abertas | integração | CT-01 | `/` e `/health` seguem públicas | E-11 | controle positivo: passa no original |
+| test_seguranca.py::test_respostas_de_usuario_nao_trazem_password | integração | CT-03 / F-004 | campo ausente | E-11 | E-12 |
+| test_seguranca.py::test_cadastro_publico_cria_apenas_usuario_comum | integração | CT-04 / F-007 | `role=admin` sem admin ⇒ 403 | E-11 | E-12 |
+| test_seguranca.py::test_usuario_nao_altera_outro_usuario | integração | CT-04 / F-007 | edição de terceiro ⇒ 403 | E-11 | E-12 |
+| test_seguranca.py::test_usuario_edita_a_si_mesmo_sem_mudar_privilegio | integração | CT-04 / F-007 | autoedição ok; `role`/`active` ⇒ 403 | E-11 | E-12 |
+| test_seguranca.py::test_admin_altera_privilegio | integração | CT-04 | admin altera perfil | E-11 | controle positivo: passa no original |
+| test_seguranca.py::test_remover_usuario_exige_admin | integração | CT-05 / F-006 | 401, 403 e 200 por perfil | E-11 | E-12 |
+| test_seguranca.py::test_remover_categoria_exige_admin | integração | CT-05 / F-006 | 401, 403 e 200 por perfil | E-11 | E-12 |
+| test_seguranca.py::test_remover_task_exige_autenticacao | integração | CT-01 / F-006 | sem token ⇒ 401 | E-11 | E-12 |
+| test_seguranca.py::test_task_de_terceiro_nao_pode_ser_alterada_nem_removida | integração | CT-09 / F-029 | terceiro ⇒ 403 e task intacta | E-11 | E-12 |
+| test_seguranca.py::test_responsavel_e_gestao_alteram_a_task | integração | CT-09 | responsável e gerente ⇒ 200 | E-11 | controle positivo: passa no original |
+| test_seguranca.py::test_dados_de_usuario_so_para_o_proprio_ou_gestao (3) | integração | CT-09 / F-029 | terceiro ⇒ 403; próprio e gestão ⇒ 200 | E-11 | E-12 |
+| test_seguranca.py::test_visoes_gerais_so_para_gestao (2) | integração | CT-09 / F-029 | usuário comum ⇒ 403; gestão ⇒ 200 | E-11 | E-12 |
+| test_seguranca.py::test_cors_nao_libera_origem_externa | integração | CT-06 / F-002 | origem externa sem liberação | E-11 | E-12 |
+| test_seguranca.py::test_cabecalhos_de_seguranca_presentes | integração | F-012 | cabeçalhos presentes | E-11 | E-12 |
+| test_seguranca.py::test_login_bloqueia_apos_falhas_repetidas | integração | F-012 | 5 falhas ⇒ 429 | E-11 | E-12 |
+| test_seguranca.py::test_atualizar_usuario_rejeita_valor_invalido (3) | integração | CT-07 / F-014 | valores inválidos ⇒ 400 | E-11 | E-12 |
+| test_seguranca.py::test_categoria_rejeita_cor_e_nome_invalidos | integração | CT-07 / F-014 | valores inválidos ⇒ 400 | E-11 | E-12 |
+| test_seguranca.py::test_tipos_invalidos_retornam_400 | integração | F-014, F-015 | tipo inválido ⇒ 400 | E-11 | E-12 |
+| test_seguranca.py::test_paginacao_das_listagens | integração | CT-08 / F-018 | `limit`/`offset` | E-11 | E-12 |
+| test_seguranca.py::test_log_do_servidor_nao_registra_dados_pessoais | integração | F-008 | nome e e-mail fora do log | E-11 | E-12 |
+| test_seguranca.py::test_senha_literal_antiga_do_seed_nao_funciona | integração | F-009 | senha antiga ⇒ 401 | E-11 | E-12 |
+| test_unidade.py (configuração, 4 testes) | unidade | F-001, F-003 | padrões seguros e segredos fora do fonte | E-11 | E-12 |
+| test_unidade.py (senha, 2 testes) | unidade | F-005 | KDF com salt e migração de MD5 | E-11 | E-12 |
+| test_unidade.py (token e limite, 2 testes) | unidade | F-002, F-012 | adulteração, expiração e janela de bloqueio | E-11 | E-12 |
+| test_unidade.py (camadas e paginação, 4 testes) | unidade | F-010, F-011, F-016, CT-08 | regra no service, módulo próprio, vínculo e limite de 100 | E-11 | E-12 (erro de fixture: `create_app` não existe no original) |
+| test_seguranca.py::test_listagem_mostra_somente_as_proprias_tasks | integração | CT-09 / F-029 | `GET /tasks` só com as próprias tasks | E-11 | E-12 |
+| test_seguranca.py::test_acesso_direto_a_task_alheia_retorna_403 | integração | CT-09 / F-029 | alheia ⇒ 403; própria e gestão ⇒ 200; inexistente ⇒ 404 | E-11 | E-12 |
+| test_seguranca.py::test_busca_filtra_pelo_proprio_usuario | integração | CT-09 / F-029 | busca por termo e `user_id` alheios vazia; gestão encontra | E-11 | E-12 |
+| test_seguranca.py::test_estatisticas_consideram_somente_as_proprias_tasks | integração | CT-09 / F-029 | totais limitados ao usuário | E-11 | E-12 |
+| test_seguranca.py::test_contagem_por_categoria_nao_revela_tasks_alheias | integração | CT-09 / F-029 | `task_count` sem tasks alheias | E-11 | E-12 |
+| test_seguranca.py::test_usuario_comum_nao_atribui_task_a_terceiro | integração | CT-09 / F-029 | criar, transferir ou remover responsável ⇒ 403 | E-11 | E-12 |
+| test_seguranca.py::test_gestao_atribui_task_a_terceiro | integração | CT-09 | gerente atribui e transfere | E-11 | controle positivo: passa no original |
+| test_seguranca.py::test_task_criada_por_usuario_comum_fica_sob_sua_responsabilidade | integração | CT-09 / F-029 | criador vira responsável | E-11 | E-12 |
+| test_seguranca.py::test_referencia_invalida_retorna_400 (6) | integração | CT-09 / F-014 | `[]`, `{}` e inteiro gigante ⇒ 400 | E-11 | E-12 |
+| test_seguranca.py::test_inteiros_gigantes_na_url_e_na_busca_nao_geram_500 | integração | F-014 | URL ⇒ 404; busca e paginação ⇒ 400 | E-11 | E-12 |
+| test_unidade.py (escopo, estatísticas e id fora da faixa, 3 testes) | unidade | CT-09 / F-029 | escopo por perfil e consultas limitadas | E-11 | E-12 |
+| test_unidade.py::test_referencia_invalida_e_rejeitada (16) | unidade | CT-09 / F-014 | referências malformadas ⇒ 400 | E-11 | E-12 |
+| test_unidade.py::test_referencia_numerica_em_texto_e_normalizada | unidade | CT-09 | `"5"` vira `5`, sem burlar a comparação de responsável | E-11 | E-12 |
+| test_unidade.py::test_dependencias_diretas_fixadas_na_versao_instalada | unidade | F-013 | dependências diretas declaradas na versão instalada | E-11 | E-12 |
 
-Totais: 60 testes novos (48 de integração, 12 de unidade). No checkpoint, com `test_login_sucesso`, foram 61 execuções: 53 falhas, 4 erros de fixture e 4 aprovações (os controles positivos acima).
+Totais: 96 testes novos (63 de integração, 33 de unidade), sendo 36 acrescentados após a validação independente. No checkpoint, com `test_login_sucesso`, foram 97 execuções: 86 falhas, 6 erros de fixture e 5 aprovações (os controles positivos acima).
 
 ## Evidências de execução
-(`E-00` — Fase 1 — foi gravado na Fase 2.) Arquivos brutos em `reports/evidence/project-3/20261116-214549/`.
+(`E-00` — Fase 1 — foi gravado na Fase 2.) Arquivos brutos em `reports/evidence/project-3/20261116-214549/`. E-01 a E-09 são da primeira rodada e foram preservados; **os resultados finais são os de E-10 a E-17**, gerados após a validação independente.
 
 ### E-01 · Testes do projeto (baseline)
 Comando: `.venv\Scripts\python.exe -m pytest -v` · Diretório: task-manager-api · Origem: K-01 · Classe B · Autorização: automática
@@ -613,145 +631,190 @@ Resultado: `Debug mode: off`, `Running on http://127.0.0.1:5000` · Bruto: `E-08
 ### E-09 · Diff dos testes
 Bruto: `E-09-diff-testes.patch`; originais em `tests-before/`.
 
+### E-10 · Execução local autenticada (baseline, bateria ampliada)
+Comando: `python v4_bateria.py baseline <cópia do checkpoint bb765d3>` · Origem: K-07 · Classe B · Autorização: automática
+Exit code: 0 · Resultado: 150 requisições em banco descartável (as 117 de E-02 + 33 casos novos) · Bruto: `E-10-baseline-execucao-local.log`, `E-10-baseline-execucao-local-requisicoes.log`
+
+### E-11 · Testes do projeto (final)
+Comando: `.venv\Scripts\python.exe -m pytest -q --tb=short` · Origem: K-01 · Classe B · Autorização: automática
+Exit code: 0 · Resultado: passed 121 | failed 0 | skipped 0 (baseline E-01: passed 25) · Bruto: `E-11-final-pytest.log`
+Integridade: nenhum teste removido, pulado ou com asserção enfraquecida; diff em `E-17-diff-testes.patch`.
+
+### E-12 · Prova de sensibilidade (checkpoint original)
+Comando: `python -m pytest tests/test_seguranca.py tests/test_unidade.py tests/test_api.py::test_login_sucesso -q --tb=no -rA -p no:cacheprovider` · Origem: K-06 · Classe B na cópia
+Exit code: 1 (esperado) · Resultado: failed 86 | errors 6 | passed 5 · Bruto: `E-12-prova-vermelha-checkpoint.log`
+
+### E-13 · Execução local autenticada (final)
+Comando: `python v4_bateria.py final <cópia do projeto>` · Origem: K-07 · Classe B · Autorização: automática
+Exit code: 0 · Resultado: 150 requisições em banco descartável · Bruto: `E-13-final-execucao-local.log`, `E-13-final-execucao-local-requisicoes.log`
+
+### E-14 · Comparação antes/depois
+Exit code: 0 · Resultado: 61 iguais, 83 alteradas por contrato aprovado, 6 por correção sem contrato, 0 divergentes · Bruto: `E-14-comparacao-rotas.log`, `E-14-comparacao-rotas-detalhe.log`
+
+### E-15 · Reauditoria do catálogo e matriz de acesso
+Comando: `python -B reauditoria.py` (script temporário fora do projeto) · Classe B
+Exit code: 0 · Resultado: 19 verificações de acesso entre usuários sem falha; 5 verificações adicionais confirmam os residuais R-01, R-02, R-04 e R-05 · Bruto: `E-15-reauditoria.log`
+
+### E-16 · Boot (final)
+Resultado: `Debug mode: off`, `Running on http://127.0.0.1:5000` · Bruto: `E-16-boot-final.log`
+
+### E-17 · Diff dos testes (validação independente)
+Bruto: `E-17-diff-testes.patch`; arquivos anteriores em `tests-before-validacao/`.
+
 ### Execução local autenticada (V4)
 Credenciais: geradas por execução nas variáveis `SEED_*_PASSWORD` + `POST /login` (no código original, dados do seed versionado); valores mascarados. Integrações: nenhuma. Banco: arquivo SQLite descartável em cópia fora do projeto.
 
 | Método | Rota | Credencial | ANTES (status) | DEPOIS (status) | Resultado | Qtde | Prova |
 |---|---|---|---|---|---|---|---|
-| GET | `/` | sem | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/health` | sem | 200 | 200 | igual | 2 | E-02, E-05 |
-| POST | `/login` | sem | 200 | 200 | igual | 3 | E-02, E-05 |
-| POST | `/login` | sem | 401 | 401 | igual | 1 | E-02, E-05 |
-| POST | `/login` | sem | 400 | 400 | igual | 1 | E-02, E-05 |
-| GET | `/tasks` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks` | user | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/tasks` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/tasks/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks/<id>` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks/<id>` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks/<id>` | user | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/tasks/<id>` | admin | 200 | 200 | igual | 2 | E-02, E-05 |
-| GET | `/tasks/search?q=a` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks/search?q=a` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks/search?q=a` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks/search?q=a` | user | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/tasks/search?q=a` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/tasks/stats` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks/stats` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks/stats` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/tasks/stats` | user | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/tasks/stats` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/users` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/users` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/users` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/users` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-02, E-05 |
-| GET | `/users` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/users/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/users/<id>` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/users/<id>` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/users/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-02, E-05 |
-| GET | `/users/<id>` | admin | 200 | 200 | ALTERADO (aprovado CT-03) | 2 | E-02, E-05 |
-| GET | `/users/<id>/tasks` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/users/<id>/tasks` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/users/<id>/tasks` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/users/<id>/tasks` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-02, E-05 |
-| GET | `/users/<id>/tasks` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/reports/summary` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/reports/summary` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/reports/summary` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/reports/summary` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-02, E-05 |
-| GET | `/reports/summary` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/reports/user/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/reports/user/<id>` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/reports/user/<id>` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/reports/user/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-02, E-05 |
-| GET | `/reports/user/<id>` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/categories` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/categories` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/categories` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| GET | `/categories` | user | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/categories` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| POST | `/tasks` | sem | 201 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| POST | `/tasks` | user | 201 | 201 | igual | 1 | E-02, E-05 |
-| POST | `/tasks` | admin | 201 | 201 | igual | 6 | E-02, E-05 |
-| POST | `/tasks` | admin | 500 | 400 | ALTERADO (correção F-014, sem contrato) | 1 | E-02, E-05 |
-| GET | `/tasks/search?priority=abc` | admin | 500 | 400 | ALTERADO (correção F-014, sem contrato) | 1 | E-02, E-05 |
-| PUT | `/tasks/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| PUT | `/tasks/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-02, E-05 |
-| PUT | `/tasks/<id>` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| DELETE | `/tasks/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| DELETE | `/tasks/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-02, E-05 |
-| DELETE | `/tasks/<id>` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| POST | `/users` | sem | 201 | 201 | ALTERADO (aprovado CT-03) | 1 | E-02, E-05 |
-| POST | `/users` | sem | 201 | 403 | ALTERADO (aprovado CT-04/CT-05) | 1 | E-02, E-05 |
-| POST | `/users` | user | 201 | 403 | ALTERADO (aprovado CT-04/CT-05) | 1 | E-02, E-05 |
-| POST | `/users` | admin | 201 | 201 | ALTERADO (aprovado CT-03) | 4 | E-02, E-05 |
-| PUT | `/users/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| PUT | `/users/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-04/CT-05) | 2 | E-02, E-05 |
-| PUT | `/users/<id>` | user | 200 | 200 | ALTERADO (aprovado CT-03) | 1 | E-02, E-05 |
-| PUT | `/users/<id>` | admin | 200 | 200 | ALTERADO (aprovado CT-03) | 1 | E-02, E-05 |
-| PUT | `/users/<id>` | admin | 200 | 400 | ALTERADO (aprovado CT-07) | 1 | E-02, E-05 |
-| DELETE | `/users/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| DELETE | `/users/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-04/CT-05) | 1 | E-02, E-05 |
-| DELETE | `/users/<id>` | admin | 200 | 200 | igual | 1 | E-02, E-05 |
-| POST | `/categories` | sem | 201 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| POST | `/categories` | user | 201 | 201 | igual | 1 | E-02, E-05 |
-| POST | `/categories` | admin | 201 | 400 | ALTERADO (aprovado CT-07) | 1 | E-02, E-05 |
-| PUT | `/categories/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| PUT | `/categories/<id>` | user | 200 | 200 | igual | 1 | E-02, E-05 |
-| POST | `/categories` | admin | 201 | 201 | igual | 4 | E-02, E-05 |
-| DELETE | `/categories/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-02, E-05 |
-| DELETE | `/categories/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-04/CT-05) | 1 | E-02, E-05 |
-| DELETE | `/categories/<id>` | admin | 200 | 200 | igual | 2 | E-02, E-05 |
-| GET | `/users` | manager | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/reports/summary` | manager | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/users/<id>` | manager | 200 | 200 | ALTERADO (aprovado CT-03) | 1 | E-02, E-05 |
-| GET | `/users/<id>/tasks` | manager | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/reports/user/<id>` | manager | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/users/<id>` | user | 200 | 200 | ALTERADO (aprovado CT-03) | 1 | E-02, E-05 |
-| GET | `/users/<id>/tasks` | user | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/reports/user/<id>` | user | 200 | 200 | igual | 1 | E-02, E-05 |
-| PUT | `/tasks/<id>` | user | 200 | 200 | igual | 1 | E-02, E-05 |
-| PUT | `/tasks/<id>` | manager | 200 | 200 | igual | 1 | E-02, E-05 |
-| DELETE | `/tasks/<id>` | user | 200 | 200 | igual | 1 | E-02, E-05 |
-| GET | `/tasks?limit=2` | admin | 200 | 200 | ALTERADO (aprovado CT-08) | 1 | E-02, E-05 |
+| GET | `/` | sem | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/health` | sem | 200 | 200 | igual | 2 | E-10, E-13 |
+| POST | `/login` | sem | 200 | 200 | igual | 3 | E-10, E-13 |
+| POST | `/login` | sem | 401 | 401 | igual | 1 | E-10, E-13 |
+| POST | `/login` | sem | 400 | 400 | igual | 1 | E-10, E-13 |
+| GET | `/tasks` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks` | user | 200 | 200 | igual | 2 | E-10, E-13 |
+| GET | `/tasks` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/tasks/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks/<id>` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks/<id>` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 2 | E-10, E-13 |
+| GET | `/tasks/<id>` | admin | 200 | 200 | igual | 2 | E-10, E-13 |
+| GET | `/tasks/search?q=a` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks/search?q=a` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks/search?q=a` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks/search?q=a` | user | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/tasks/search?q=a` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/tasks/stats` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks/stats` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks/stats` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/tasks/stats` | user | 200 | 200 | igual | 2 | E-10, E-13 |
+| GET | `/tasks/stats` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/users` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/users` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/users` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/users` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-10, E-13 |
+| GET | `/users` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/users/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/users/<id>` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/users/<id>` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/users/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-10, E-13 |
+| GET | `/users/<id>` | admin | 200 | 200 | ALTERADO (aprovado CT-03) | 2 | E-10, E-13 |
+| GET | `/users/<id>/tasks` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/users/<id>/tasks` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/users/<id>/tasks` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/users/<id>/tasks` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-10, E-13 |
+| GET | `/users/<id>/tasks` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/reports/summary` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/reports/summary` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/reports/summary` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/reports/summary` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-10, E-13 |
+| GET | `/reports/summary` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/reports/user/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/reports/user/<id>` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/reports/user/<id>` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/reports/user/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-10, E-13 |
+| GET | `/reports/user/<id>` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/categories` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/categories` | invalida | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/categories` | forjada | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| GET | `/categories` | user | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/categories` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| POST | `/tasks` | sem | 201 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| POST | `/tasks` | user | 201 | 201 | igual | 1 | E-10, E-13 |
+| POST | `/tasks` | admin | 201 | 201 | igual | 9 | E-10, E-13 |
+| POST | `/tasks` | admin | 500 | 400 | ALTERADO (correção F-014, sem contrato) | 1 | E-10, E-13 |
+| GET | `/tasks/search?priority=abc` | admin | 500 | 400 | ALTERADO (correção F-014, sem contrato) | 1 | E-10, E-13 |
+| PUT | `/tasks/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| PUT | `/tasks/<id>` | user | 200 | 200 | igual | 2 | E-10, E-13 |
+| PUT | `/tasks/<id>` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| DELETE | `/tasks/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| DELETE | `/tasks/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 1 | E-10, E-13 |
+| DELETE | `/tasks/<id>` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| POST | `/users` | sem | 201 | 201 | ALTERADO (aprovado CT-03) | 1 | E-10, E-13 |
+| POST | `/users` | sem | 201 | 403 | ALTERADO (aprovado CT-04/CT-05) | 1 | E-10, E-13 |
+| POST | `/users` | user | 201 | 403 | ALTERADO (aprovado CT-04/CT-05) | 1 | E-10, E-13 |
+| POST | `/users` | admin | 201 | 201 | ALTERADO (aprovado CT-03) | 4 | E-10, E-13 |
+| PUT | `/users/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| PUT | `/users/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-04/CT-05) | 2 | E-10, E-13 |
+| PUT | `/users/<id>` | user | 200 | 200 | ALTERADO (aprovado CT-03) | 1 | E-10, E-13 |
+| PUT | `/users/<id>` | admin | 200 | 200 | ALTERADO (aprovado CT-03) | 1 | E-10, E-13 |
+| PUT | `/users/<id>` | admin | 200 | 400 | ALTERADO (aprovado CT-07) | 1 | E-10, E-13 |
+| DELETE | `/users/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| DELETE | `/users/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-04/CT-05) | 1 | E-10, E-13 |
+| DELETE | `/users/<id>` | admin | 200 | 200 | igual | 1 | E-10, E-13 |
+| POST | `/categories` | sem | 201 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| POST | `/categories` | user | 201 | 201 | igual | 1 | E-10, E-13 |
+| POST | `/categories` | admin | 201 | 400 | ALTERADO (aprovado CT-07) | 1 | E-10, E-13 |
+| PUT | `/categories/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| PUT | `/categories/<id>` | user | 200 | 200 | igual | 1 | E-10, E-13 |
+| POST | `/categories` | admin | 201 | 201 | igual | 4 | E-10, E-13 |
+| DELETE | `/categories/<id>` | sem | 200 | 401 | ALTERADO (aprovado CT-01/CT-02) | 1 | E-10, E-13 |
+| DELETE | `/categories/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-04/CT-05) | 1 | E-10, E-13 |
+| DELETE | `/categories/<id>` | admin | 200 | 200 | igual | 2 | E-10, E-13 |
+| GET | `/users` | manager | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/reports/summary` | manager | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/users/<id>` | manager | 200 | 200 | ALTERADO (aprovado CT-03) | 1 | E-10, E-13 |
+| GET | `/users/<id>/tasks` | manager | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/reports/user/<id>` | manager | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/users/<id>` | user | 200 | 200 | ALTERADO (aprovado CT-03) | 1 | E-10, E-13 |
+| GET | `/users/<id>/tasks` | user | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/reports/user/<id>` | user | 200 | 200 | igual | 1 | E-10, E-13 |
+| PUT | `/tasks/<id>` | manager | 200 | 200 | igual | 1 | E-10, E-13 |
+| DELETE | `/tasks/<id>` | user | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/tasks?limit=2` | admin | 200 | 200 | ALTERADO (aprovado CT-08) | 1 | E-10, E-13 |
+| GET | `/tasks` | manager | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/tasks/<id>` | user | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/tasks/<id>` | manager | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/tasks/search?user_id=1` | user | 200 | 200 | ALTERADO (aprovado CT-09) | 1 | E-10, E-13 |
+| GET | `/tasks/search?q=sigiloso` | user | 200 | 200 | ALTERADO (aprovado CT-09) | 1 | E-10, E-13 |
+| GET | `/tasks/search?q=sigiloso` | manager | 200 | 200 | igual | 1 | E-10, E-13 |
+| GET | `/tasks/stats` | manager | 200 | 200 | igual | 1 | E-10, E-13 |
+| POST | `/tasks` | user | 201 | 403 | ALTERADO (aprovado CT-09) | 1 | E-10, E-13 |
+| PUT | `/tasks/<id>` | user | 200 | 403 | ALTERADO (aprovado CT-09) | 2 | E-10, E-13 |
+| POST | `/tasks` | manager | 201 | 201 | igual | 1 | E-10, E-13 |
+| POST | `/tasks` | admin | 500 | 400 | ALTERADO (aprovado CT-09) | 6 | E-10, E-13 |
+| PUT | `/tasks/<id>` | admin | 500 | 400 | ALTERADO (aprovado CT-09) | 6 | E-10, E-13 |
+| GET | `/tasks/<id>` | admin | 500 | 404 | ALTERADO (correção F-014, sem contrato) | 1 | E-10, E-13 |
+| GET | `/users/<id>` | admin | 500 | 404 | ALTERADO (correção F-014, sem contrato) | 1 | E-10, E-13 |
+| GET | `/tasks/search?user_id=<gigante>` | admin | 500 | 400 | ALTERADO (correção F-014, sem contrato) | 1 | E-10, E-13 |
+| GET | `/tasks/search?priority=<gigante>` | admin | 500 | 400 | ALTERADO (correção F-014, sem contrato) | 1 | E-10, E-13 |
 
 ### Comparação antes/depois (rotas)
 | Método | Rota | ANTES | DEPOIS | Resultado | Prova |
 |---|---|---|---|---|---|
-| GET | / | 200 | 200 | igual | E-06 |
-| GET | /health | 200 | 200 | igual | E-06 |
-| POST | /login | 200, token previsível, `password` | 200, token assinado, sem `password` | ALTERADO (aprovado CT-02, CT-03) | E-06 |
-| GET | /tasks | 200 aberta | 401 sem token; 200 autenticado | ALTERADO (aprovado CT-01, CT-08) | E-06 |
-| GET | /tasks/<id> | 200 aberta | 401 sem token; 200 autenticado | ALTERADO (aprovado CT-01) | E-06 |
-| POST | /tasks | 201 aberta; 500 com tipo inválido | 401 sem token; 201 autenticado; 400 com tipo inválido | ALTERADO (aprovado CT-01; correção F-014) | E-06 |
-| PUT | /tasks/<id> | 200 aberta | 401; 403 para terceiro; 200 para responsável e gestão | ALTERADO (aprovado CT-01, CT-09) | E-06 |
-| DELETE | /tasks/<id> | 200 aberta | 401; 403 para terceiro; 200 para responsável e gestão | ALTERADO (aprovado CT-01, CT-09) | E-06 |
-| GET | /tasks/search | 200 aberta; 500 com filtro inválido | 401 sem token; 200 autenticado; 400 com filtro inválido | ALTERADO (aprovado CT-01, CT-08; correção F-014) | E-06 |
-| GET | /tasks/stats | 200 aberta | 401 sem token; 200 autenticado | ALTERADO (aprovado CT-01) | E-06 |
-| GET | /users | 200 aberta | 401; 403 usuário comum; 200 gestão | ALTERADO (aprovado CT-01, CT-08, CT-09) | E-06 |
-| GET | /users/<id> | 200 com `password` | 401; 403 terceiro; 200 próprio e gestão, sem `password` | ALTERADO (aprovado CT-01, CT-03, CT-09) | E-06 |
-| POST | /users | 201 com qualquer `role` | 201 só `user`; 403 para outro perfil sem admin | ALTERADO (aprovado CT-03, CT-04) | E-06 |
-| PUT | /users/<id> | 200 aberta | 401; 403 terceiro; 200 próprio ou admin; 400 valor inválido | ALTERADO (aprovado CT-01, CT-03, CT-04, CT-07) | E-06 |
-| DELETE | /users/<id> | 200 aberta | 401; 403; 200 admin | ALTERADO (aprovado CT-01, CT-05) | E-06 |
-| GET | /users/<id>/tasks | 200 aberta | 401; 403 terceiro; 200 próprio e gestão | ALTERADO (aprovado CT-01, CT-09) | E-06 |
-| GET | /reports/summary | 200 aberta | 401; 403 usuário comum; 200 gestão | ALTERADO (aprovado CT-01, CT-09) | E-06 |
-| GET | /reports/user/<id> | 200 aberta | 401; 403 terceiro; 200 próprio e gestão | ALTERADO (aprovado CT-01, CT-09) | E-06 |
-| GET | /categories | 200 aberta | 401 sem token; 200 autenticado | ALTERADO (aprovado CT-01, CT-08) | E-06 |
-| POST | /categories | 201 aberta | 401; 201 autenticado; 400 cor inválida | ALTERADO (aprovado CT-01, CT-07) | E-06 |
-| PUT | /categories/<id> | 200 aberta | 401; 200 autenticado | ALTERADO (aprovado CT-01) | E-06 |
-| DELETE | /categories/<id> | 200 aberta | 401; 403; 200 admin | ALTERADO (aprovado CT-01, CT-05) | E-06 |
+| GET | / | 200 | 200 | igual | E-14 |
+| GET | /health | 200 | 200 | igual | E-14 |
+| POST | /login | 200, token previsível, `password` | 200, token assinado, sem `password` | ALTERADO (aprovado CT-02, CT-03) | E-14 |
+| GET | /tasks | 200 aberta, todas as tasks | 401; usuário comum só as próprias; gestão todas | ALTERADO (aprovado CT-01, CT-08, CT-09) | E-14 |
+| GET | /tasks/<id> | 200 aberta | 401; 403 alheia; 200 responsável e gestão; 404 id gigante | ALTERADO (aprovado CT-01, CT-09; correção F-014) | E-14 |
+| POST | /tasks | 201 aberta; 500 com tipo inválido | 401; 201 com o criador comum como responsável; 403 atribuição a terceiro; 400 tipo ou referência inválidos | ALTERADO (aprovado CT-01, CT-09; correção F-014) | E-14 |
+| PUT | /tasks/<id> | 200 aberta | 401; 403 terceiro ou transferência sem gestão; 200 responsável e gestão; 400 referência inválida | ALTERADO (aprovado CT-01, CT-09) | E-14 |
+| DELETE | /tasks/<id> | 200 aberta | 401; 403 terceiro; 200 responsável e gestão | ALTERADO (aprovado CT-01, CT-09) | E-14 |
+| GET | /tasks/search | 200 aberta; 500 com filtro inválido | 401; usuário comum só as próprias; gestão todas; 400 filtro inválido | ALTERADO (aprovado CT-01, CT-08, CT-09; correção F-014) | E-14 |
+| GET | /tasks/stats | 200 aberta, totais gerais | 401; usuário comum só os próprios totais; gestão totais gerais | ALTERADO (aprovado CT-01, CT-09) | E-14 |
+| GET | /users | 200 aberta | 401; 403 usuário comum; 200 gestão | ALTERADO (aprovado CT-01, CT-08, CT-09) | E-14 |
+| GET | /users/<id> | 200 com `password` | 401; 403 terceiro; 200 próprio e gestão, sem `password`; 404 id gigante | ALTERADO (aprovado CT-01, CT-03, CT-09; correção F-014) | E-14 |
+| POST | /users | 201 com qualquer `role` | 201 só `user`; 403 para outro perfil sem admin | ALTERADO (aprovado CT-03, CT-04) | E-14 |
+| PUT | /users/<id> | 200 aberta | 401; 403 terceiro; 200 próprio ou admin; 400 valor inválido | ALTERADO (aprovado CT-01, CT-03, CT-04, CT-07) | E-14 |
+| DELETE | /users/<id> | 200 aberta | 401; 403; 200 admin | ALTERADO (aprovado CT-01, CT-05) | E-14 |
+| GET | /users/<id>/tasks | 200 aberta | 401; 403 terceiro; 200 próprio e gestão | ALTERADO (aprovado CT-01, CT-09) | E-14 |
+| GET | /reports/summary | 200 aberta | 401; 403 usuário comum; 200 gestão | ALTERADO (aprovado CT-01, CT-09) | E-14 |
+| GET | /reports/user/<id> | 200 aberta | 401; 403 terceiro; 200 próprio e gestão | ALTERADO (aprovado CT-01, CT-09) | E-14 |
+| GET | /categories | 200 aberta, contagem geral | 401; `task_count` só das próprias tasks para usuário comum | ALTERADO (aprovado CT-01, CT-08, CT-09) | E-14 |
+| POST | /categories | 201 aberta | 401; 201 autenticado; 400 cor inválida | ALTERADO (aprovado CT-01, CT-07) | E-14 |
+| PUT | /categories/<id> | 200 aberta | 401; 200 autenticado | ALTERADO (aprovado CT-01) | E-14 |
+| DELETE | /categories/<id> | 200 aberta | 401; 403; 200 admin | ALTERADO (aprovado CT-01, CT-05) | E-14 |
 
 ### Resumo da validação
 | Degrau | Comando | Resultado | Evidência |
 |---|---|---|---|
-| V1 | `.venv\Scripts\python.exe -m pytest -v` | passed 85 / failed 0 / skipped 0 (baseline 25) | E-01, E-03 |
+| V1 | `.venv\Scripts\python.exe -m pytest -q --tb=short` | passed 121 / failed 0 / skipped 0 (baseline 25) | E-01, E-11 |
 | V2 | não disponível | sem lint, CI ou Makefile no projeto | — |
-| V3 | boot `python app.py` | sobe em 127.0.0.1:5000 sem debug; sem coleção de requisições no projeto | E-08 |
-| V4 | bateria de 117 requisições | 0 divergentes | E-02, E-05, E-06 |
-| V5 | importação da aplicação | coberta pelo boot e pela suíte | E-03, E-08 |
+| V3 | boot `python app.py` | sobe em 127.0.0.1:5000 sem debug; sem coleção de requisições no projeto | E-16 |
+| V4 | bateria de 150 requisições | 61 iguais, 83 por contrato aprovado, 6 por correção sem contrato, 0 divergentes | E-10, E-13, E-14 |
+| V5 | importação da aplicação | coberta pelo boot e pela suíte | E-11, E-16 |
 
 Veredito: VALIDADO (V1+V4)
 
@@ -767,20 +830,20 @@ Veredito: VALIDADO (V1+V4)
 - [x] Relatório segue o template definido nos arquivos de referência — seções e ordem de `03-template-relatorio.md`
 - [x] Cada finding tem arquivo e linhas exatos — linhas relidas; quatro imprecisões de contagem e linha corrigidas antes da pausa
 - [x] Findings ordenados por severidade (CRITICAL → LOW) — F-001 a F-028
-- [x] Mínimo de 5 findings identificados — 28, mais F-029 na reauditoria
+- [x] Mínimo de 5 findings identificados — 28, mais F-029 na reauditoria (concluído após a validação independente)
 - [x] Detecção de APIs deprecated incluída (se aplicável) — F-021 e F-022
 - [x] Skill pausa e pede confirmação antes da Fase 3 — resposta `1A 2A 3A 4A`
 
 ### Fase 3 — Refatoração
-- [x] Estrutura de diretórios segue padrão MVC — config, models, views, controllers, routes e entry point separados (E-07)
-- [x] Configuração extraída para módulo de config (sem hardcoded) — config/settings.py; busca por segredos sem ocorrências (E-07)
-- [x] Models criados para abstrair dados — consultas somente em models/; `db.session` só em services/persistence.py para a transação (E-07)
+- [x] Estrutura de diretórios segue padrão MVC — config, models, views, controllers, routes e entry point separados (E-15)
+- [x] Configuração extraída para módulo de config (sem hardcoded) — config/settings.py; busca por segredos sem ocorrências (E-15)
+- [x] Models criados para abstrair dados — consultas somente em models/; `db.session` só em services/persistence.py para a transação (E-15)
 - [x] Views/Routes separadas para visualização ou roteamento — routes/ e views/serializers.py
 - [x] Controllers concentram o fluxo da aplicação — controllers/ chamam validators, services e views
-- [x] Error handling centralizado — middleware/error_handler.py; zero `except:` genérico (E-07)
-- [x] Entry point claro — app.py com `create_app()`; comando `python app.py` (E-08)
-- [x] Aplicação inicia sem erros — E-08
-- [x] Endpoints originais respondem corretamente — 22 de 22 rotas presentes; 2 iguais e 20 alteradas por contratos aprovados CT-01 a CT-09, com prova (E-03, E-05, E-06)
+- [x] Error handling centralizado — middleware/error_handler.py; zero `except:` genérico (E-15)
+- [x] Entry point claro — app.py com `create_app()`; comando `python app.py` (E-16)
+- [x] Aplicação inicia sem erros — E-16
+- [x] Endpoints originais respondem corretamente — 22 de 22 rotas presentes; 2 iguais e 20 alteradas por contratos aprovados CT-01 a CT-09, com prova (E-11, E-13, E-14)
 
 ## Itens residuais (reauditoria)
 CRITICAL/HIGH sem correção: Nenhum
@@ -793,6 +856,13 @@ Demais findings ainda presentes, total ou parcialmente:
 - F-023 (LOW): README não atualizado (recomendação manual; texto-base acima)
 - F-025 (LOW, parcial): datas seguem serializadas com `str()` para preservar o formato das respostas
 
+Pontos não corrigidos, declarados após a validação independente (nenhum foi aprovado para correção nesta execução):
+- R-01 (MEDIUM): categorias podem ser criadas e renomeadas por qualquer usuário autenticado (E-15)
+- R-02 (MEDIUM): token emitido antes de uma troca de senha continua válido até expirar, por até 1 h no padrão (E-15)
+- R-03 (LOW): possível enumeração de e-mail pelo tempo de resposta do login, pois o hash só é calculado para conta existente; não medido nesta execução
+- R-04 (LOW): e-mail com caixa diferente cria conta separada (E-15)
+- R-05 (LOW): `POST /users` responde 409 para e-mail já cadastrado, o que revela a existência da conta; comportamento original mantido, identificado na reauditoria (E-15)
+
 ## Observações da execução
 - Stack detectada e confiança: Python 3.14 + Flask 3.0.0, confiança alta.
 - Dicas específicas usadas × derivadas do sinal abstrato: dicas do catálogo para Python/Flask; nada derivado.
@@ -802,5 +872,5 @@ Demais findings ainda presentes, total ou parcialmente:
 - Mudanças de comportamento sem `CT-xx` próprio: erros 404/405 e de JSON malformado passam a ter corpo JSON, com o mesmo status; `POST /login` pode responder 429 após 5 falhas; quando um payload tem dois erros simultâneos, a mensagem devolvida pode ser outra, pois a validação de formato ocorre antes da checagem de referências.
 - `active` em `POST /users` já era ignorado no original e continua ignorado.
 - Hashes MD5 existentes em `instance/tasks.db` só migram no próximo login de cada usuário. O banco do projeto não foi alterado nesta execução.
-- Tentativas/iterações na Fase 3 e reversões: uma iteração adicional para C-17 / CT-09; nenhuma reversão. A verificação rápida foi feita ao fim do bloco de mudanças, e não após cada padrão do playbook.
-- Arquivos criados pela execução fora do código-fonte: `reports/audit-project-3.md`, `reports/evidence/project-3/20261116-214549/`; worktree do checkpoint e cópias temporárias em `exec-p3`, removidos na limpeza. Nenhuma branch criada.
+- Tentativas/iterações na Fase 3 e reversões: uma iteração para incluir C-17 / CT-09 e outra para concluí-la após a reprovação da validação independente; nenhuma reversão. A verificação rápida foi feita ao fim do bloco de mudanças, e não após cada padrão do playbook.
+- Arquivos criados pela execução fora do código-fonte: `reports/audit-project-3.md`, `reports/evidence/project-3/20261116-214549/`; worktree do checkpoint e cópias temporárias em `exec-p3`, recriados na segunda rodada e removidos na limpeza. Nenhuma branch criada.

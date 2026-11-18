@@ -1,7 +1,7 @@
 from sqlalchemy import case, func
 from sqlalchemy.orm import joinedload
 
-from database import db
+from database import db, get_by_id
 from models.constants import DEFAULT_PRIORITY, FINISHED_STATUSES, STATUS_DONE, STATUS_PENDING
 from utils.clock import utcnow
 
@@ -30,17 +30,29 @@ class Task(db.Model):
         return self.due_date < utcnow()
 
     @classmethod
-    def find(cls, task_id):
-        return db.session.get(cls, task_id)
+    def _scoped(cls, owner_id):
+        """Consulta limitada ao responsável informado; None não restringe."""
+        return cls.query if owner_id is None else cls.query.filter(cls.user_id == owner_id)
 
     @classmethod
-    def list_page(cls, limit, offset):
-        return (cls.query.options(joinedload(cls.user), joinedload(cls.category))
+    def _count_grouped_by(cls, column, owner_id):
+        query = db.session.query(column, func.count(cls.id))
+        if owner_id is not None:
+            query = query.filter(cls.user_id == owner_id)
+        return dict(query.group_by(column).all())
+
+    @classmethod
+    def find(cls, task_id):
+        return get_by_id(cls, task_id)
+
+    @classmethod
+    def list_page(cls, limit, offset, owner_id=None):
+        return (cls._scoped(owner_id).options(joinedload(cls.user), joinedload(cls.category))
                 .order_by(cls.id).limit(limit).offset(offset).all())
 
     @classmethod
-    def search(cls, term, status, priority, user_id, limit, offset):
-        query = cls.query
+    def search(cls, term, status, priority, user_id, limit, offset, owner_id=None):
+        query = cls._scoped(owner_id)
         if term:
             query = query.filter(db.or_(cls.title.like(f'%{term}%'), cls.description.like(f'%{term}%')))
         if status:
@@ -56,26 +68,26 @@ class Task(db.Model):
         return cls.query.filter_by(user_id=user_id).order_by(cls.id).all()
 
     @classmethod
-    def list_overdue(cls):
-        return (cls.query.filter(cls.due_date.isnot(None), cls.due_date < utcnow(),
-                                 cls.status.notin_(FINISHED_STATUSES))
+    def list_overdue(cls, owner_id=None):
+        return (cls._scoped(owner_id)
+                .filter(cls.due_date.isnot(None), cls.due_date < utcnow(), cls.status.notin_(FINISHED_STATUSES))
                 .order_by(cls.id).all())
 
     @classmethod
-    def count_all(cls):
-        return cls.query.count()
+    def count_all(cls, owner_id=None):
+        return cls._scoped(owner_id).count()
 
     @classmethod
-    def count_by_status(cls):
-        return dict(db.session.query(cls.status, func.count(cls.id)).group_by(cls.status).all())
+    def count_by_status(cls, owner_id=None):
+        return cls._count_grouped_by(cls.status, owner_id)
 
     @classmethod
     def count_by_priority(cls):
-        return dict(db.session.query(cls.priority, func.count(cls.id)).group_by(cls.priority).all())
+        return cls._count_grouped_by(cls.priority, None)
 
     @classmethod
-    def count_by_category(cls):
-        return dict(db.session.query(cls.category_id, func.count(cls.id)).group_by(cls.category_id).all())
+    def count_by_category(cls, owner_id=None):
+        return cls._count_grouped_by(cls.category_id, owner_id)
 
     @classmethod
     def totals_by_user(cls):

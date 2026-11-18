@@ -4,7 +4,7 @@ import re
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from database import db
+from database import db, get_by_id
 from models.constants import ROLE_ADMIN, ROLE_USER, STAFF_ROLES
 from utils.clock import utcnow
 
@@ -41,9 +41,13 @@ class User(db.Model):
     def is_staff(self):
         return self.role in STAFF_ROLES
 
+    def task_scope(self):
+        """Responsável pelas tasks visíveis ao usuário; None significa todas."""
+        return None if self.is_staff() else self.id
+
     @classmethod
     def find(cls, user_id):
-        return db.session.get(cls, user_id)
+        return get_by_id(cls, user_id)
 
     @classmethod
     def find_by_email(cls, email):

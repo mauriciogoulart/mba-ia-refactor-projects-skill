@@ -1,5 +1,6 @@
 from models.constants import MAX_PAGE_SIZE
 from utils.errors import AppError
+from utils.limits import MAX_SQL_INTEGER
 
 
 def require_object(data):
@@ -10,9 +11,12 @@ def require_object(data):
 
 def parse_int_param(raw, message):
     try:
-        return int(raw)
+        value = int(raw)
     except (TypeError, ValueError) as exc:
         raise AppError(message) from exc
+    if abs(value) > MAX_SQL_INTEGER:
+        raise AppError(message)
+    return value
 
 
 def parse_pagination(args):

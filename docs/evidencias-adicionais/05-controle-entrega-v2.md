@@ -71,7 +71,7 @@ Decisões do usuário para a v2:
 | 3.9 | P3 task-manager-api — Fases 1 e 2 (pausa) | ✅ | Run id 20261116-214549; 28 findings (7 C / 4 H / 11 M / 6 L); asterisco de Manter contrato*: "3 CRITICAL (F-002, F-006, F-007) e 0 HIGH ficarão sem correção"; execução interrompida por limite de uso da API e retomada em 2026-11-18 |
 | 3.10 | P3 — respostas e Fase 3 | 🔄 | respostas `1A 2A 3A 4A`; lote C aprovado; token assinado no `/login`. A reauditoria achou um HIGH novo (SEC-11, acesso a dados de terceiros): incluída a correção C-17 / CT-09 em vez de deixá-lo residual. Veredito VALIDADO (V1+V4); 0 CRITICAL/HIGH residuais; testes 25 → 85 (60 de prova: 12 unidade, 48 integração); execução local autenticada com 117 requisições (E-02 × E-05), 0 divergentes |
 | 3.11 | P3 — commit | ✅ | ver registro |
-| 3.12 | P3 — validação independente (subagente) | 🔄 | |
+| 3.12 | P3 — validação independente (subagente) | ⚠️ | 1ª rodada: NÃO APROVADO — F-029 (HIGH) corrigido só em parte (leituras de tasks alheias por `/tasks/search`, `/tasks` e `/tasks/<id>`). Correção em andamento; nova validação depois dela |
 
 ## Fase 4 — Documentação
 

@@ -1,0 +1,16 @@
+Comando:    D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\v4_comparar.py C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\baseline.json C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\final.json D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\reports\evidence\project-3\20261116-214549\E-14-comparacao-rotas-detalhe.log C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\v4_tabela.md
+Diretório:  C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3
+Origem:     Passo V · 06 §6 · Classe B
+Início/Fim: 2026-11-18T20:02:41-03:00 → 2026-11-18T20:02:42-03:00 (duração 0.1s)
+Exit code:  0
+------------------------------------------------------------
+total 150
+ 38  ALTERADO (aprovado CT-01/CT-02)
+ 11  ALTERADO (aprovado CT-03)
+  6  ALTERADO (aprovado CT-04/CT-05)
+  2  ALTERADO (aprovado CT-07)
+  1  ALTERADO (aprovado CT-08)
+ 25  ALTERADO (aprovado CT-09)
+  6  ALTERADO (correção F-014, sem contrato)
+ 61  igual
+

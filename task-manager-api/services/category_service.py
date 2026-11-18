@@ -8,9 +8,9 @@ from utils.errors import AppError
 logger = logging.getLogger(__name__)
 
 
-def list_categories(limit, offset):
-    """Devolve pares (categoria, quantidade de tasks)."""
-    totals = Task.count_by_category()
+def list_categories(limit, offset, owner_id=None):
+    """Devolve pares (categoria, quantidade de tasks visíveis ao responsável informado)."""
+    totals = Task.count_by_category(owner_id)
     return [(category, totals.get(category.id, 0)) for category in Category.list_page(limit, offset)]
 
 

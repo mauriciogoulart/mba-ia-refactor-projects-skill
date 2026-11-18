@@ -173,6 +173,112 @@ def test_visoes_gerais_so_para_gestao(api, rota):
     assert api.get(rota).status_code == 200
 
 
+# ---------- CT-09 (F-029): leitura de tasks e atribuição (validação independente) ----------
+
+def _usuario_com_task(api, titulo=None):
+    usuario = _novo_usuario(api)
+    corpo = {"title": titulo or "Task " + _sufixo(), "user_id": usuario["id"]}
+    task = api.post("/tasks", corpo)
+    assert task.status_code == 201, task.text
+    return usuario, task.json(), _cabecalho_de(api, usuario)
+
+
+def test_listagem_mostra_somente_as_proprias_tasks(api):
+    _, propria, cabecalho = _usuario_com_task(api)
+    _, alheia, _ = _usuario_com_task(api)
+    ids = [t["id"] for t in api.anonimo.get("/tasks", headers=cabecalho).json()]
+    assert ids == [propria["id"]]
+    assert alheia["id"] not in ids
+
+
+def test_acesso_direto_a_task_alheia_retorna_403(api):
+    _, propria, cabecalho = _usuario_com_task(api)
+    _, alheia, _ = _usuario_com_task(api)
+    assert api.anonimo.get(f"/tasks/{alheia['id']}", headers=cabecalho).status_code == 403
+    assert api.anonimo.get(f"/tasks/{propria['id']}", headers=cabecalho).status_code == 200
+    assert api.gerente.get(f"/tasks/{alheia['id']}").status_code == 200
+    assert api.get(f"/tasks/{alheia['id']}").status_code == 200
+    assert api.anonimo.get("/tasks/999999", headers=cabecalho).status_code == 404
+
+
+def test_busca_filtra_pelo_proprio_usuario(api):
+    marcador = "busca" + _sufixo()
+    dono, alheia, _ = _usuario_com_task(api, titulo="Alheia " + marcador)
+    _, _, cabecalho = _usuario_com_task(api)
+    assert api.anonimo.get("/tasks/search", params={"q": marcador}, headers=cabecalho).json() == []
+    assert api.anonimo.get("/tasks/search", params={"user_id": dono["id"]}, headers=cabecalho).json() == []
+    assert [t["id"] for t in api.gerente.get("/tasks/search", params={"q": marcador}).json()] == [alheia["id"]]
+
+
+def test_estatisticas_consideram_somente_as_proprias_tasks(api):
+    _, _, cabecalho = _usuario_com_task(api)
+    _usuario_com_task(api)
+    assert api.anonimo.get("/tasks/stats", headers=cabecalho).json()["total"] == 1
+    assert api.gerente.get("/tasks/stats").json()["total"] > 1
+
+
+def test_contagem_por_categoria_nao_revela_tasks_alheias(api):
+    categoria = _nova_categoria(api)
+    dono = _novo_usuario(api)
+    assert api.post("/tasks", {"title": "Task " + _sufixo(), "user_id": dono["id"],
+                               "category_id": categoria["id"]}).status_code == 201
+    _, _, cabecalho = _usuario_com_task(api)
+
+    def contagem(resposta):
+        return next(c["task_count"] for c in resposta.json() if c["id"] == categoria["id"])
+
+    assert contagem(api.anonimo.get("/categories", headers=cabecalho)) == 0
+    assert contagem(api.gerente.get("/categories")) == 1
+
+
+def test_usuario_comum_nao_atribui_task_a_terceiro(api):
+    dono, propria, cabecalho = _usuario_com_task(api)
+    outro = _novo_usuario(api)
+    corpo = {"title": "Task " + _sufixo(), "user_id": outro["id"]}
+    assert api.anonimo.post("/tasks", corpo, headers=cabecalho).status_code == 403
+    assert api.anonimo.put(f"/tasks/{propria['id']}", {"user_id": outro["id"]}, headers=cabecalho).status_code == 403
+    assert api.anonimo.put(f"/tasks/{propria['id']}", {"user_id": None}, headers=cabecalho).status_code == 403
+    assert api.get(f"/tasks/{propria['id']}").json()["user_id"] == dono["id"]
+
+
+def test_gestao_atribui_task_a_terceiro(api):
+    dono, propria, _ = _usuario_com_task(api)
+    outro = _novo_usuario(api)
+    criada = api.gerente.post("/tasks", {"title": "Task " + _sufixo(), "user_id": outro["id"]})
+    assert criada.status_code == 201
+    assert criada.json()["user_id"] == outro["id"]
+    transferida = api.gerente.put(f"/tasks/{propria['id']}", {"user_id": outro["id"]})
+    assert transferida.status_code == 200
+    assert transferida.json()["user_id"] == outro["id"]
+    assert dono["id"] != outro["id"]
+
+
+def test_task_criada_por_usuario_comum_fica_sob_sua_responsabilidade(api):
+    dono = _novo_usuario(api)
+    cabecalho = _cabecalho_de(api, dono)
+    criada = api.anonimo.post("/tasks", {"title": "Task " + _sufixo()}, headers=cabecalho)
+    assert criada.status_code == 201
+    assert criada.json()["user_id"] == dono["id"]
+    assert api.anonimo.get(f"/tasks/{criada.json()['id']}", headers=cabecalho).status_code == 200
+
+
+@pytest.mark.parametrize("valor", [[], {}, 10 ** 30])
+@pytest.mark.parametrize("campo", ["user_id", "category_id"])
+def test_referencia_invalida_retorna_400(api, campo, valor):
+    task = _nova_task(api)
+    assert api.post("/tasks", {"title": "Titulo valido", campo: valor}).status_code == 400
+    assert api.put(f"/tasks/{task['id']}", {campo: valor}).status_code == 400
+
+
+def test_inteiros_gigantes_na_url_e_na_busca_nao_geram_500(api):
+    gigante = 10 ** 30
+    assert api.get(f"/tasks/{gigante}").status_code == 404
+    assert api.get(f"/users/{gigante}").status_code == 404
+    assert api.get("/tasks/search", params={"user_id": gigante}).status_code == 400
+    assert api.get("/tasks/search", params={"priority": gigante}).status_code == 400
+    assert api.get("/tasks", params={"offset": gigante}).status_code == 400
+
+
 # ---------- CT-06 (F-002/F-012): CORS e proteções HTTP ----------
 
 def test_cors_nao_libera_origem_externa(api):

@@ -10,6 +10,7 @@ from models.constants import (
     VALID_STATUSES,
 )
 from utils.errors import AppError
+from utils.limits import MAX_SQL_INTEGER
 from validators.common import parse_int_param, require_object
 
 FORMATO_DATA = '%Y-%m-%d'
@@ -38,9 +39,31 @@ def _parse_status(value):
 
 
 def _parse_priority(value):
-    if not isinstance(value, (int, float)) or value < MIN_PRIORITY or value > MAX_PRIORITY:
+    if not isinstance(value, (int, float)) or not MIN_PRIORITY <= value <= MAX_PRIORITY:
         raise AppError(f'Prioridade deve ser entre {MIN_PRIORITY} e {MAX_PRIORITY}')
     return value
+
+
+def _parse_reference(value, invalid_message, not_found_message):
+    """Normaliza o id de uma referência; texto não numérico equivale a registro inexistente."""
+    if value is None or value == '':
+        return None
+    if isinstance(value, str):
+        try:
+            value = int(value)
+        except ValueError as exc:
+            raise AppError(not_found_message, 404) from exc
+    if isinstance(value, bool) or not isinstance(value, int) or abs(value) > MAX_SQL_INTEGER:
+        raise AppError(invalid_message)
+    return value
+
+
+def _parse_user_reference(value):
+    return _parse_reference(value, 'Usuário inválido', 'Usuário não encontrado')
+
+
+def _parse_category_reference(value):
+    return _parse_reference(value, 'Categoria inválida', 'Categoria não encontrada')
 
 
 def _parse_due_date(value, message):
@@ -72,8 +95,8 @@ def parse_new_task(data):
         'description': _parse_description(data.get('description', '')),
         'status': _parse_status(data.get('status', STATUS_PENDING)),
         'priority': _parse_priority(data.get('priority', DEFAULT_PRIORITY)),
-        'user_id': data.get('user_id'),
-        'category_id': data.get('category_id'),
+        'user_id': _parse_user_reference(data.get('user_id')),
+        'category_id': _parse_category_reference(data.get('category_id')),
         'due_date': _parse_due_date(due_date, 'Formato de data inválido. Use YYYY-MM-DD') if due_date else None,
         'tags': _parse_tags(tags) if tags else None,
     }
@@ -91,9 +114,9 @@ def parse_task_update(data):
     if 'priority' in data:
         fields['priority'] = _parse_priority(data['priority'])
     if 'user_id' in data:
-        fields['user_id'] = data['user_id']
+        fields['user_id'] = _parse_user_reference(data['user_id'])
     if 'category_id' in data:
-        fields['category_id'] = data['category_id']
+        fields['category_id'] = _parse_category_reference(data['category_id'])
     if 'due_date' in data:
         due_date = data['due_date']
         fields['due_date'] = _parse_due_date(due_date, 'Formato de data inválido') if due_date else None

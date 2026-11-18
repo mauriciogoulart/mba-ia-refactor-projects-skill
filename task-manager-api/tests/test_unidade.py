@@ -146,6 +146,65 @@ def test_remover_categoria_preserva_task_sem_vinculo(app_memoria):
     assert db.session.get(Task, task.id).category_id is None
 
 
+# ---------- CT-09 (F-029): escopo das tasks e referências ----------
+
+def test_escopo_de_tasks_por_perfil():
+    from models.user import User
+
+    assert User(id=3, role="user").task_scope() == 3
+    assert User(id=3, role="manager").task_scope() is None
+    assert User(id=3, role="admin").task_scope() is None
+
+
+def test_estatisticas_respeitam_o_responsavel(app_memoria):
+    from database import db
+    from models.task import Task
+    from models.user import User
+    from services import task_service
+
+    dono = User(name="Dono", email="dono@teste.com", password="x")
+    outro = User(name="Outro", email="outro@teste.com", password="x")
+    db.session.add_all([dono, outro])
+    db.session.commit()
+    db.session.add_all([Task(title="Minha", user_id=dono.id), Task(title="Alheia", user_id=outro.id)])
+    db.session.commit()
+
+    assert task_service.get_stats(dono.id)["total"] == 1
+    assert task_service.get_stats()["total"] == 2
+
+
+@pytest.mark.parametrize("valor", [[], {}, [1], {"a": 1}, True, 1.5, 10 ** 30, str(10 ** 30)])
+@pytest.mark.parametrize("campo", ["user_id", "category_id"])
+def test_referencia_invalida_e_rejeitada(campo, valor):
+    from utils.errors import AppError
+    from validators.task_validator import parse_new_task, parse_task_update
+
+    for analisar, dados in ((parse_new_task, {"title": "Titulo valido", campo: valor}), (parse_task_update, {campo: valor})):
+        with pytest.raises(AppError) as erro:
+            analisar(dados)
+        assert erro.value.status == 400
+
+
+def test_referencia_numerica_em_texto_e_normalizada():
+    from validators.task_validator import parse_task_update
+
+    assert parse_task_update({"user_id": "5"})["user_id"] == 5
+
+
+def test_id_fora_da_faixa_do_banco_nao_existe(app_memoria):
+    from models.task import Task
+
+    assert Task.find(10 ** 30) is None
+
+
+def test_dependencias_diretas_fixadas_na_versao_instalada():
+    from importlib.metadata import version
+
+    declaradas = (RAIZ / "requirements.txt").read_text(encoding="utf-8").split()
+    for pacote in ("sqlalchemy", "werkzeug", "itsdangerous"):
+        assert f"{pacote}=={version(pacote)}" in declaradas
+
+
 # ---------- CT-08 (F-018): limite padrão ----------
 
 def test_listagem_limita_a_100_itens_por_padrao(app_memoria):
@@ -156,7 +215,8 @@ def test_listagem_limita_a_100_itens_por_padrao(app_memoria):
     usuario = User(name="Leitor", email="leitor@teste.com")
     usuario.set_password("segredo")
     db.session.add(usuario)
-    db.session.add_all([Task(title=f"Task {n}") for n in range(101)])
+    db.session.commit()
+    db.session.add_all([Task(title=f"Task {n}", user_id=usuario.id) for n in range(101)])
     db.session.commit()
 
     token = app_memoria.extensions["token_service"].issue(usuario.id)

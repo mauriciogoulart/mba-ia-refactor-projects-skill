@@ -1,5 +1,6 @@
 from flask import jsonify, request
 
+from middleware.auth import current_user
 from services import category_service
 from validators.category_validator import parse_category_update, parse_new_category
 from validators.common import parse_pagination
@@ -8,7 +9,7 @@ from views.serializers import category_to_dict
 
 def list_categories():
     limit, offset = parse_pagination(request.args)
-    categories = category_service.list_categories(limit, offset)
+    categories = category_service.list_categories(limit, offset, current_user().task_scope())
     return jsonify([{**category_to_dict(category), 'task_count': total} for category, total in categories]), 200
 
 
