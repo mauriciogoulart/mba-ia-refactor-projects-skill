@@ -1,0 +1,127 @@
+Comando:    D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe -m pytest tests/test_seguranca.py tests/test_unidade.py tests/test_api.py::test_login_sucesso -q --tb=no -rA -p no:cacheprovider
+Diretório:  C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\red\task-manager-api
+Origem:     K-06 · 06 §8.9 · Classe B na cópia · checkpoint bb765d3
+Início/Fim: 2026-11-19T08:20:29-03:00 → 2026-11-19T08:20:39-03:00 (duração 10.5s)
+Exit code:  1
+------------------------------------------------------------
+FFFFFFFFFFFFFFFFFFFF..FFFF.FFFF.FFFFFFFFFFF.FFFFFFFFFFFFFF.F.FFFFFFFFFFF [ 61%]
+FFFFFFFFFFFEEEFEFFFFFFFFFFFFFFFFFEFEFFFFFFFEF                            [100%]
+=========================== short test summary info ===========================
+PASSED tests/test_seguranca.py::test_token_valido_acessa_rota_protegida
+PASSED tests/test_seguranca.py::test_rotas_publicas_continuam_abertas
+PASSED tests/test_seguranca.py::test_admin_altera_privilegio
+PASSED tests/test_seguranca.py::test_responsavel_e_gestao_alteram_a_task
+PASSED tests/test_seguranca.py::test_gestao_atribui_task_a_terceiro
+PASSED tests/test_seguranca.py::test_referencia_zero_ou_inexistente_retorna_404[user_id-999999]
+PASSED tests/test_seguranca.py::test_referencia_zero_ou_inexistente_retorna_404[category_id-999999]
+ERROR tests/test_unidade.py::test_estatisticas_calculadas_no_service - Import...
+ERROR tests/test_unidade.py::test_categorias_em_modulo_proprio - ImportError:...
+ERROR tests/test_unidade.py::test_remover_categoria_preserva_task_sem_vinculo
+ERROR tests/test_unidade.py::test_estatisticas_respeitam_o_responsavel - Impo...
+ERROR tests/test_unidade.py::test_id_fora_da_faixa_do_banco_nao_existe - Impo...
+ERROR tests/test_unidade.py::test_contagens_por_status_e_atraso_respeitam_o_responsavel
+ERROR tests/test_unidade.py::test_listagem_limita_a_100_itens_por_padrao - Im...
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[GET-/tasks]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[GET-/tasks/1]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[GET-/tasks/search]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[GET-/tasks/stats]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[POST-/tasks]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[PUT-/tasks/1]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[DELETE-/tasks/999999]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[GET-/users]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[GET-/users/1]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[GET-/users/1/tasks]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[PUT-/users/1]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[DELETE-/users/999999]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[GET-/reports/summary]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[GET-/reports/user/1]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[GET-/categories]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[POST-/categories]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[PUT-/categories/1]
+FAILED tests/test_seguranca.py::test_rota_sem_token_retorna_401[DELETE-/categories/999999]
+FAILED tests/test_seguranca.py::test_token_invalido_ou_forjado_retorna_401[invalido]
+FAILED tests/test_seguranca.py::test_token_invalido_ou_forjado_retorna_401[fake-jwt-token-1]
+FAILED tests/test_seguranca.py::test_respostas_de_usuario_nao_trazem_password
+FAILED tests/test_seguranca.py::test_cadastro_publico_cria_apenas_usuario_comum
+FAILED tests/test_seguranca.py::test_usuario_nao_altera_outro_usuario - Asser...
+FAILED tests/test_seguranca.py::test_usuario_edita_a_si_mesmo_sem_mudar_privilegio
+FAILED tests/test_seguranca.py::test_remover_usuario_exige_admin - AssertionE...
+FAILED tests/test_seguranca.py::test_remover_categoria_exige_admin - Assertio...
+FAILED tests/test_seguranca.py::test_remover_task_exige_autenticacao - Assert...
+FAILED tests/test_seguranca.py::test_task_de_terceiro_nao_pode_ser_alterada_nem_removida
+FAILED tests/test_seguranca.py::test_dados_de_usuario_so_para_o_proprio_ou_gestao[/users/{}]
+FAILED tests/test_seguranca.py::test_dados_de_usuario_so_para_o_proprio_ou_gestao[/users/{}/tasks]
+FAILED tests/test_seguranca.py::test_dados_de_usuario_so_para_o_proprio_ou_gestao[/reports/user/{}]
+FAILED tests/test_seguranca.py::test_visoes_gerais_so_para_gestao[/users] - A...
+FAILED tests/test_seguranca.py::test_visoes_gerais_so_para_gestao[/reports/summary]
+FAILED tests/test_seguranca.py::test_listagem_mostra_somente_as_proprias_tasks
+FAILED tests/test_seguranca.py::test_acesso_direto_a_task_alheia_retorna_403
+FAILED tests/test_seguranca.py::test_busca_filtra_pelo_proprio_usuario - Asse...
+FAILED tests/test_seguranca.py::test_estatisticas_consideram_somente_as_proprias_tasks
+FAILED tests/test_seguranca.py::test_contagem_por_categoria_nao_revela_tasks_alheias
+FAILED tests/test_seguranca.py::test_usuario_comum_nao_atribui_task_a_terceiro
+FAILED tests/test_seguranca.py::test_task_criada_por_usuario_comum_fica_sob_sua_responsabilidade
+FAILED tests/test_seguranca.py::test_referencia_invalida_retorna_400[user_id-valor0]
+FAILED tests/test_seguranca.py::test_referencia_invalida_retorna_400[user_id-valor1]
+FAILED tests/test_seguranca.py::test_referencia_invalida_retorna_400[user_id-1000000000000000000000000000000]
+FAILED tests/test_seguranca.py::test_referencia_invalida_retorna_400[category_id-valor0]
+FAILED tests/test_seguranca.py::test_referencia_invalida_retorna_400[category_id-valor1]
+FAILED tests/test_seguranca.py::test_referencia_invalida_retorna_400[category_id-1000000000000000000000000000000]
+FAILED tests/test_seguranca.py::test_inteiros_gigantes_na_url_e_na_busca_nao_geram_500
+FAILED tests/test_seguranca.py::test_token_de_conta_excluida_nao_assume_a_conta_que_herda_o_id
+FAILED tests/test_seguranca.py::test_token_antigo_deixa_de_valer_apos_troca_de_senha
+FAILED tests/test_seguranca.py::test_titulo_com_surrogate_isolado_retorna_400
+FAILED tests/test_seguranca.py::test_prioridade_nao_inteira_retorna_400[2.5]
+FAILED tests/test_seguranca.py::test_prioridade_nao_inteira_retorna_400[True]
+FAILED tests/test_seguranca.py::test_referencia_zero_ou_inexistente_retorna_404[user_id-0]
+FAILED tests/test_seguranca.py::test_referencia_zero_ou_inexistente_retorna_404[category_id-0]
+FAILED tests/test_seguranca.py::test_usuario_comum_nao_atribui_task_ao_id_zero
+FAILED tests/test_seguranca.py::test_estatisticas_por_status_e_atraso_no_escopo_do_usuario
+FAILED tests/test_seguranca.py::test_cors_nao_libera_origem_externa - Asserti...
+FAILED tests/test_seguranca.py::test_cabecalhos_de_seguranca_presentes - KeyE...
+FAILED tests/test_seguranca.py::test_login_bloqueia_apos_falhas_repetidas - A...
+FAILED tests/test_seguranca.py::test_atualizar_usuario_rejeita_valor_invalido[campos0]
+FAILED tests/test_seguranca.py::test_atualizar_usuario_rejeita_valor_invalido[campos1]
+FAILED tests/test_seguranca.py::test_atualizar_usuario_rejeita_valor_invalido[campos2]
+FAILED tests/test_seguranca.py::test_categoria_rejeita_cor_e_nome_invalidos
+FAILED tests/test_seguranca.py::test_tipos_invalidos_retornam_400 - Assertion...
+FAILED tests/test_seguranca.py::test_paginacao_das_listagens - AssertionError...
+FAILED tests/test_seguranca.py::test_log_do_servidor_nao_registra_dados_pessoais
+FAILED tests/test_seguranca.py::test_senha_literal_antiga_do_seed_nao_funciona
+FAILED tests/test_unidade.py::test_configuracao_padrao_sem_debug_e_sem_bind_publico
+FAILED tests/test_unidade.py::test_secret_key_vem_do_ambiente - ModuleNotFoun...
+FAILED tests/test_unidade.py::test_producao_exige_secret_key_e_proibe_debug
+FAILED tests/test_unidade.py::test_fonte_sem_segredos_literais - assert "SECR...
+FAILED tests/test_unidade.py::test_senha_usa_kdf_com_salt - AssertionError: a...
+FAILED tests/test_unidade.py::test_hash_md5_legado_migra_na_primeira_conferencia
+FAILED tests/test_unidade.py::test_token_assinado_valida_adulteracao_e_expiracao
+FAILED tests/test_unidade.py::test_token_vinculado_a_credencial_da_conta - Mo...
+FAILED tests/test_unidade.py::test_limite_de_login_libera_apos_a_janela - Mod...
+FAILED tests/test_unidade.py::test_escopo_de_tasks_por_perfil - AttributeErro...
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[user_id-valor0]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[user_id-valor1]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[user_id-valor2]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[user_id-valor3]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[user_id-True]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[user_id-1.5]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[user_id-1000000000000000000000000000000_0]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[user_id-1000000000000000000000000000000_1]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[category_id-valor0]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[category_id-valor1]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[category_id-valor2]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[category_id-valor3]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[category_id-True]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[category_id-1.5]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[category_id-1000000000000000000000000000000_0]
+FAILED tests/test_unidade.py::test_referencia_invalida_e_rejeitada[category_id-1000000000000000000000000000000_1]
+FAILED tests/test_unidade.py::test_referencia_numerica_em_texto_e_normalizada
+FAILED tests/test_unidade.py::test_dependencias_diretas_fixadas_na_versao_instalada
+FAILED tests/test_unidade.py::test_prioridade_aceita_somente_inteiro_na_faixa[2.5]
+FAILED tests/test_unidade.py::test_prioridade_aceita_somente_inteiro_na_faixa[2.0]
+FAILED tests/test_unidade.py::test_prioridade_aceita_somente_inteiro_na_faixa[True]
+FAILED tests/test_unidade.py::test_prioridade_aceita_somente_inteiro_na_faixa[False]
+FAILED tests/test_unidade.py::test_prioridade_aceita_somente_inteiro_na_faixa[2]
+FAILED tests/test_unidade.py::test_prioridade_aceita_somente_inteiro_na_faixa[None]
+FAILED tests/test_unidade.py::test_texto_com_surrogate_isolado_e_rejeitado - ...
+FAILED tests/test_api.py::test_login_sucesso - AssertionError: assert 'fake-j...
+103 failed, 7 passed, 7 errors in 9.60s

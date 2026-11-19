@@ -16,9 +16,9 @@ def completion_rate(completed, total):
 
 
 def _ensure_references(fields):
-    if fields.get('user_id') and User.find(fields['user_id']) is None:
+    if fields.get('user_id') is not None and User.find(fields['user_id']) is None:
         raise AppError('Usuário não encontrado', 404)
-    if fields.get('category_id') and Category.find(fields['category_id']) is None:
+    if fields.get('category_id') is not None and Category.find(fields['category_id']) is None:
         raise AppError('Categoria não encontrada', 404)
 
 
@@ -53,7 +53,8 @@ def get_accessible_task(task_id, actor):
 
 def create_task(fields, actor):
     if not actor.is_staff():
-        _ensure_can_assign(fields['user_id'] or actor.id, actor)
+        requested = fields['user_id']
+        _ensure_can_assign(actor.id if requested is None else requested, actor)
         fields = {**fields, 'user_id': actor.id}
     _ensure_references(fields)
     task = Task(**fields)

@@ -1,0 +1,20 @@
+Comando:    D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\v4_comparar.py C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\baseline.json C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\final.json D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\reports\evidence\project-3\20261116-214549\E-27-comparacao-rotas-detalhe.log C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\v4_tabela.md
+Diretório:  C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3
+Origem:     Passo V · 06 §6 · Classe B · mesmos JSON de E-18/E-21
+Início/Fim: 2026-11-19T08:21:27-03:00 → 2026-11-19T08:21:27-03:00 (duração 0.1s)
+Exit code:  0
+------------------------------------------------------------
+total 171
+ 38  ALTERADO (aprovado CT-01/CT-02)
+  3  ALTERADO (aprovado CT-02, token vinculado à conta)
+  1  ALTERADO (aprovado CT-02: no original o token de A trocou a senha de B)
+ 16  ALTERADO (aprovado CT-03)
+  6  ALTERADO (aprovado CT-04/CT-05)
+  2  ALTERADO (aprovado CT-07)
+  4  ALTERADO (aprovado CT-07/CT-09)
+  1  ALTERADO (aprovado CT-08)
+ 25  ALTERADO (aprovado CT-09)
+  7  ALTERADO (correção F-014, sem contrato)
+ 66  igual
+  2  igual (status; corpo de erro em JSON pelo handler central, C-10)
+

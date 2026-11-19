@@ -3,10 +3,28 @@ from utils.errors import AppError
 from utils.limits import MAX_SQL_INTEGER
 
 
+def ensure_valid_text(data):
+    """Rejeita textos que não podem ser gravados em UTF-8 (ex.: surrogate isolado), em qualquer nível."""
+    pendentes = [data]
+    while pendentes:
+        valor = pendentes.pop()
+        if isinstance(valor, str):
+            try:
+                valor.encode('utf-8')
+            except UnicodeEncodeError as exc:
+                raise AppError('Texto inválido') from exc
+        elif isinstance(valor, dict):
+            pendentes.extend(valor.keys())
+            pendentes.extend(valor.values())
+        elif isinstance(valor, list):
+            pendentes.extend(valor)
+    return data
+
+
 def require_object(data):
     if not data or not isinstance(data, dict):
         raise AppError('Dados inválidos')
-    return data
+    return ensure_valid_text(data)
 
 
 def parse_int_param(raw, message):

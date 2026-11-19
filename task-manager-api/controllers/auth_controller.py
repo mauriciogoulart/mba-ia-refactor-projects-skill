@@ -12,5 +12,5 @@ def login():
     return jsonify({
         'message': 'Login realizado com sucesso',
         'user': user_to_public(user),
-        'token': current_app.extensions['token_service'].issue(user.id),
+        'token': current_app.extensions['token_service'].issue(user),
     }), 200

@@ -4,17 +4,27 @@
 - **Versão:** v3 — skill 1.2
 - **Desafio:** `docs/DESAFIO.md` (seções "Validação" e "Critérios de Aceite")
 - **Skill:** `task-manager-api/.claude/skills/refactor-arch/` (última alteração em `20f9e72`; idêntica à cópia de `code-smells-project`)
-- **Branch/commit:** `entrega-v2` @ `fcc9fc4` (refatorado, sem diferença na working tree em `task-manager-api/`); original `5303107`
+- **Branch/commit:** `entrega-v2` @ `5ba4f4b` (segunda rodada); primeira rodada em `fcc9fc4`; original `5303107`. Sem diferença na working tree em `task-manager-api/`
 - **Relatório validado:** `reports/audit-project-3.md` (Run id 20261116-214549)
-- **Evidências:** `reports/evidence/project-3/20261116-214549/` (E-00 a E-09 + `tests-before/`)
+- **Evidências:** `reports/evidence/project-3/20261116-214549/` (E-00 a E-17, `tests-before/` e `tests-before-validacao/`)
 
 ## Veredito
 
-**NÃO APROVADO na versão 1.2, por 1 ponto bloqueante. Os critérios de aceite do desafio estão atendidos.**
+**Veredito final (segunda rodada, `5ba4f4b`): NÃO APROVADO na versão 1.2, por 1 ponto bloqueante novo. Os critérios de aceite do desafio continuam atendidos.**
+
+- **Bloqueante da primeira rodada: resolvido.** Usuário comum e conta de cadastro público não leem nem deduzem tasks alheias pelas rotas de tasks, relatórios e categorias; admin e manager continuam vendo tudo.
+- **Bloqueante novo:** o token de uma conta excluída volta a valer quando o id dela é reutilizado por um novo cadastro. Com ele foi possível ler as tasks e o perfil da nova conta e **trocar a senha dela**. Reproduzi 3 vezes em 3 rodadas. Detalhes em "Segunda rodada de validação".
+- **Demais itens pedidos:** atribuição, valores inválidos, dependências, integridade das asserções e residuais R-01 a R-05 atendidos.
+
+### Registro da primeira rodada (`fcc9fc4`): reprovado
+
+**NÃO APROVADO na versão 1.2, por 1 ponto bloqueante. Os critérios de aceite do desafio estavam atendidos.**
 
 - **Desafio:** os 4 critérios de aceite foram atendidos e conferidos em execução própria.
-- **Bloqueante (critério adicional 3a):** o F-029 (SEC-11, HIGH) foi corrigido só nas rotas que ele lista. Um usuário comum recebe 403 em `GET /users/1/tasks`, mas recebe **200 com as mesmas tasks** em `GET /tasks/search?user_id=1`. Basta uma conta criada no cadastro público. A afirmação "CRITICAL/HIGH sem correção: Nenhum" do relatório não se sustenta.
+- **Bloqueante (critério adicional 3a):** o F-029 (SEC-11, HIGH) foi corrigido só nas rotas que ele lista. Um usuário comum recebia 403 em `GET /users/1/tasks`, mas **200 com as mesmas tasks** em `GET /tasks/search?user_id=1`. Bastava uma conta criada no cadastro público. A afirmação "CRITICAL/HIGH sem correção: Nenhum" do relatório não se sustentava.
 - **Demais critérios adicionais:** 3c, 3d e 3e atendidos; 3b atendido com evidência documental.
+
+As seções de "Método de verificação" a "Residuais declarados pela skill" registram a primeira rodada e foram mantidas como estavam.
 
 ## Método de verificação
 
@@ -141,3 +151,60 @@ A coluna "Depois" dos findings reflete esta validação, não o relatório, que 
 - **F-023 (LOW):** README não atualizado.
 - **F-025 (LOW, parcial):** datas serializadas com `str()` para preservar o formato.
 - **Limitação declarada:** limite de login em memória, por processo.
+
+## Segunda rodada de validação
+
+Código validado: `5ba4f4b` (`fix(task-manager-api): conclui F-029 após validação independente`).
+
+### Método e números
+
+1. **Suíte completa:** **121 passed**, exit 0, igual ao E-11.
+2. **Bateria real própria** em cópia temporária, porta 5000, com senhas e chave geradas por mim: **586 requisições e 325 verificações: 320 ok e 5 divergências**, todas no mesmo caso de URL com 5000 dígitos (ponto de atenção 4). Teste de isolamento em duas identidades (usuário comum do seed e conta de cadastro público):
+   - Tasks alheias criadas com um marcador em título, descrição e tags; nenhuma resposta do usuário comum contém o marcador.
+   - **Teste diferencial:** alterei tasks alheias (status, prioridade, categoria, atraso) e comparei cada resposta antes e depois; nenhuma mudou, o que descarta dedução por contagens em `/tasks/stats` e no `task_count` de `/categories`.
+   - HEAD, PUT e DELETE em task alheia ou sem responsável: 403.
+3. **Reprodução isolada do bloqueante novo:** script separado, 3 rodadas com o mesmo resultado, mais 1 controle.
+4. **Prova vermelha própria:** testes atuais contra o código de `fcc9fc4`: **35 failed, 86 passed**.
+5. **Mutação das correções novas:** **16 de 18 mutantes mortos** (ponto de atenção 2).
+6. **Integridade dos testes:** comparação por AST contra `5303107`, `tests-before/` e `fcc9fc4`.
+7. Processos encerrados, porta 5000 livre, cópias temporárias removidas e `instance/tasks.db` do projeto intacto.
+
+### Resultado por item
+
+| Item | Verificação | Resultado |
+|---|---|---|
+| 1 | Suíte completa | **Atendido:** 121 passed |
+| 2 | Comum não lê nem deduz tasks alheias em `/tasks`, `/tasks/<id>`, `/tasks/search`, `/tasks/stats`, `/users/<id>/tasks`, `/reports/*` e `task_count`; gestão vê tudo | **Atendido** nessas rotas |
+| 3 | Outros caminhos para os mesmos dados | **Não atendido:** token de conta excluída com id reutilizado (ponto de atenção 1) |
+| 4 | Atribuição e valores inválidos | **Atendido:** criar ou transferir para outro responde 403 sem gravar; `[]`, `{}`, booleanos, decimais e inteiros gigantes respondem 400; id gigante na URL responde 404 até 2^63; nenhum 500 nesses campos |
+| 5 | Dependências diretas declaradas | **Atendido:** os 7 pacotes importados estão em `requirements.txt`, nas versões instaladas; `pip check` sem conflitos |
+| 6 | Asserções e residuais | **Atendido:** nenhuma asserção original enfraquecida; R-01 a R-05 declarados no relatório |
+
+Sobre o item 6: desde `fcc9fc4`, `test_api.py` e `conftest.py` não mudaram. `test_seguranca.py` foi de 72 para 107 asserções e `test_unidade.py` de 29 para 38, sem remoção. O único teste antigo alterado é `test_listagem_limita_a_100_itens_por_padrao`: mudou o cenário e manteve as 2 asserções. Contra `5303107`, segue valendo a única troca já registrada (formato `fake-jwt-token-<id>`, exigida pelo CT-02).
+
+### Números atualizados
+
+| Métrica | Primeira rodada | Segunda rodada |
+|---|---|---|
+| Arquivos-fonte | 44 | 45 |
+| Linhas | 1486 | 1550 |
+| Maior arquivo | `validators/task_validator.py` (113) | `validators/task_validator.py` (136) |
+| Rotas | 22 | 22 |
+| Testes | 85 | 121 |
+
+### Pontos de atenção
+
+1. **BLOQUEANTE — token de conta excluída assume a conta que herda o id.**
+   - **Sequência reproduzida:** a conta A faz login; o admin exclui A (o token passa a responder 401); um novo cadastro B recebe o mesmo id; o token antigo de A volta a responder 200.
+   - **Impacto observado:** com o token de A, li as tasks e o e-mail de B e troquei a senha de B via `PUT /users/<id>`. A senha original de B passou a responder 401 e a do invasor, 200.
+   - **Causa:** o token guarda só `user_id`, e o SQLite reutiliza o maior id quando a última linha é excluída.
+   - **Condições:** a conta excluída precisa ter o maior id e o novo cadastro precisa ocorrer dentro da validade do token (1 h no padrão). No controle, com a conta excluída fora do maior id, o token seguiu em 401.
+   - **Por que bloqueia (avaliação minha):** a exploração depende de uma exclusão feita pelo admin, mas o cadastro é público, a exclusão costuma atingir justamente quem não deve mais ter acesso, e o resultado é a tomada da conta. O caso não consta do relatório.
+   - **Para resolver:** vincular o token à conta, por exemplo com um valor derivado do hash da senha ou com `created_at`, e rejeitar quando não conferir, com teste de regressão. Usar o hash da senha também fecharia o R-02.
+2. **Não bloqueante — lacuna de teste nas estatísticas.** Sobreviveram os mutantes que retiram o escopo das contagens por status e de atraso em `/tasks/stats`. O código está correto (o teste diferencial confirmou), mas nenhum teste automatizado protege esses dois valores.
+3. **Não bloqueante — título com surrogate inválido (`\ud800`) em `POST /tasks` responde 500** com corpo genérico. Foi a única resposta 5xx da bateria.
+4. **Não bloqueante — URL com 5000 dígitos responde 405 em vez de 404** em 5 combinações de PUT e DELETE. Não há 500 nem acesso a dados; não investiguei a causa. Ids de 23 dígitos e os limites de 2^63 respondem 404.
+5. **Não bloqueante — validação ainda permissiva.** `priority: 2.5` e `priority: true` são aceitos (201), e admin pode criar task com `user_id: 0`, que fica com responsável inexistente.
+6. **Não bloqueante — existência de task.** Task alheia responde 403 e inexistente, 404, o que revela quais ids existem, sem expor conteúdo.
+7. **Não bloqueante — escopo do CT-09.** O relatório aplicou a ampliação "dentro da C-17 / CT-09 já aprovada", mas ela muda o resultado de `GET /tasks`, `/tasks/search`, `/tasks/stats`, `/categories` e `POST /tasks`. Não há registro de nova aprovação do usuário para esse escopo maior.
+8. **Residuais declarados:** R-01 (categorias por qualquer autenticado) e R-04 (e-mail com outra caixa) continuam presentes, como o relatório informa. R-02, R-03 e R-05 foram conferidos só quanto à declaração nesta rodada.

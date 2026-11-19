@@ -279,6 +279,78 @@ def test_inteiros_gigantes_na_url_e_na_busca_nao_geram_500(api):
     assert api.get("/tasks", params={"offset": gigante}).status_code == 400
 
 
+# ---------- Segunda validação independente: token vinculado à conta e ajustes ----------
+
+def test_token_de_conta_excluida_nao_assume_a_conta_que_herda_o_id(api):
+    conta_a = _novo_usuario(api)
+    token_a = _cabecalho_de(api, conta_a)
+    rota = f"/users/{conta_a['id']}"
+    assert api.anonimo.get(rota, headers=token_a).status_code == 200
+    assert api.delete(rota).status_code == 200
+    assert api.anonimo.get(rota, headers=token_a).status_code == 401
+
+    conta_b = _novo_usuario(api)
+    assert conta_b["id"] == conta_a["id"]
+    assert api.anonimo.get(rota, headers=token_a).status_code == 401
+    assert api.anonimo.get("/tasks", headers=token_a).status_code == 401
+    assert api.anonimo.put(rota, {"password": "senha-tomada"}, headers=token_a).status_code == 401
+    assert api.anonimo.get(rota, headers=_cabecalho_de(api, conta_b)).status_code == 200
+
+
+def test_token_antigo_deixa_de_valer_apos_troca_de_senha(api):
+    usuario = _novo_usuario(api)
+    antigo = _cabecalho_de(api, usuario)
+    rota = f"/users/{usuario['id']}"
+    assert api.anonimo.put(rota, {"password": "senha-nova"}, headers=antigo).status_code == 200
+    assert api.anonimo.get(rota, headers=antigo).status_code == 401
+    assert api.anonimo.post("/login", {"email": usuario["email"], "password": "segredo"}).status_code == 401
+    novo = api.anonimo.post("/login", {"email": usuario["email"], "password": "senha-nova"})
+    assert novo.status_code == 200
+    assert api.anonimo.get(rota, headers={"Authorization": "Bearer " + novo.json()["token"]}).status_code == 200
+
+
+def test_titulo_com_surrogate_isolado_retorna_400(api):
+    corpo = '{"title": "Titulo \\ud800 invalido"}'
+    r = api.post("/tasks", data=corpo, headers={"Content-Type": "application/json"})
+    assert r.status_code == 400
+
+
+@pytest.mark.parametrize("valor", [2.5, True])
+def test_prioridade_nao_inteira_retorna_400(api, valor):
+    task = _nova_task(api)
+    assert api.post("/tasks", {"title": "Titulo valido", "priority": valor}).status_code == 400
+    assert api.put(f"/tasks/{task['id']}", {"priority": valor}).status_code == 400
+
+
+@pytest.mark.parametrize("valor", [0, 999999])
+@pytest.mark.parametrize("campo", ["user_id", "category_id"])
+def test_referencia_zero_ou_inexistente_retorna_404(api, campo, valor):
+    task = _nova_task(api)
+    assert api.post("/tasks", {"title": "Titulo valido", campo: valor}).status_code == 404
+    assert api.put(f"/tasks/{task['id']}", {campo: valor}).status_code == 404
+
+
+def test_usuario_comum_nao_atribui_task_ao_id_zero(api):
+    _, propria, cabecalho = _usuario_com_task(api)
+    assert api.anonimo.post("/tasks", {"title": "Task " + _sufixo(), "user_id": 0}, headers=cabecalho).status_code == 403
+    assert api.anonimo.put(f"/tasks/{propria['id']}", {"user_id": 0}, headers=cabecalho).status_code == 403
+
+
+def test_estatisticas_por_status_e_atraso_no_escopo_do_usuario(api):
+    dono = _novo_usuario(api)
+    outro = _novo_usuario(api)
+    for responsavel, status, vencimento in ((dono, "pending", "2000-01-01"), (dono, "in_progress", None),
+                                            (dono, "done", "2000-01-01"), (dono, "cancelled", None),
+                                            (outro, "pending", "2000-01-01"), (outro, "in_progress", "2000-01-01")):
+        corpo = {"title": "Task " + _sufixo(), "user_id": responsavel["id"], "status": status}
+        if vencimento:
+            corpo["due_date"] = vencimento
+        assert api.post("/tasks", corpo).status_code == 201
+    stats = api.anonimo.get("/tasks/stats", headers=_cabecalho_de(api, dono)).json()
+    assert stats == {"total": 4, "pending": 1, "in_progress": 1, "done": 1, "cancelled": 1,
+                     "overdue": 1, "completion_rate": 25.0}
+
+
 # ---------- CT-06 (F-002/F-012): CORS e proteções HTTP ----------
 
 def test_cors_nao_libera_origem_externa(api):

@@ -39,7 +39,7 @@ def _parse_status(value):
 
 
 def _parse_priority(value):
-    if not isinstance(value, (int, float)) or not MIN_PRIORITY <= value <= MAX_PRIORITY:
+    if isinstance(value, bool) or not isinstance(value, int) or not MIN_PRIORITY <= value <= MAX_PRIORITY:
         raise AppError(f'Prioridade deve ser entre {MIN_PRIORITY} e {MAX_PRIORITY}')
     return value
 

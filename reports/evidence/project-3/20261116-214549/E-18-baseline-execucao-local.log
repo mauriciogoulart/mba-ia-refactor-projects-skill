@@ -1,0 +1,20 @@
+Comando:    D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\v4_bateria.py baseline C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\baseline\app D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\reports\evidence\project-3\20261116-214549\E-18-baseline-execucao-local-requisicoes.log C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\baseline.json
+Diretório:  C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3
+Origem:     K-07 · 06 §5.1 · Classe B em banco descartável · checkpoint bb765d3
+Início/Fim: 2026-11-19T08:19:59-03:00 → 2026-11-19T08:20:07-03:00 (duração 8.6s)
+Exit code:  0
+------------------------------------------------------------
+171 requisições; banco descartável: C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\baseline\app\instance\tasks.db
+       token admin (mascarado): fake***; campo password na resposta: True
+       GET /users/1: campo password presente = True
+       POST /users: campo password presente = True
+       F-016: category_id da task após remover a categoria = None
+       GET /tasks?limit=2 devolveu 14 itens
+       Access-Control-Allow-Origin = 'http://evil.example'; X-Content-Type-Options = None
+       GET /tasks (usuário comum): tasks de terceiros na resposta = 12
+       GET /tasks (gerente): tasks de terceiros na resposta = 12
+       GET /tasks/search?user_id=<outro> (usuário comum): 5 itens
+       GET /tasks/search?q=<termo alheio> (usuário comum): 1 itens
+       GET /tasks/stats: total usuário comum = 16; total gerente = 16
+       conta B herdou o id da conta A: True
+       login da conta B com a senha original após a tentativa: status ok = False

@@ -2,7 +2,7 @@ import re
 
 from models.constants import DEFAULT_COLOR
 from utils.errors import AppError
-from validators.common import require_object
+from validators.common import ensure_valid_text, require_object
 
 FORMATO_COR = re.compile(r'#[0-9a-fA-F]{6}')
 
@@ -39,6 +39,7 @@ def parse_new_category(data):
 def parse_category_update(data):
     if not isinstance(data, dict):
         raise AppError('Dados inválidos')
+    ensure_valid_text(data)
     fields = {}
     if 'name' in data:
         fields['name'] = _parse_name(data['name'])

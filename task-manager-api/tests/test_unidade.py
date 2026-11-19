@@ -2,6 +2,7 @@
 import hashlib
 from datetime import timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -82,12 +83,31 @@ def test_hash_md5_legado_migra_na_primeira_conferencia():
 def test_token_assinado_valida_adulteracao_e_expiracao():
     from services.token_service import TokenService
 
+    usuario = SimpleNamespace(id=7, password="hash-atual")
+    carregar = {7: usuario}.get
     servico = TokenService("chave-a", 60)
-    token = servico.issue(7)
-    assert servico.verify(token) == 7
-    assert servico.verify(token + "x") is None
-    assert TokenService("chave-b", 60).verify(token) is None
-    assert TokenService("chave-a", -1).verify(token) is None
+    token = servico.issue(usuario)
+    assert servico.verify(token, carregar) is usuario
+    assert servico.verify(token + "x", carregar) is None
+    assert TokenService("chave-b", 60).verify(token, carregar) is None
+    assert TokenService("chave-a", -1).verify(token, carregar) is None
+
+
+def test_token_vinculado_a_credencial_da_conta():
+    from itsdangerous import URLSafeTimedSerializer
+
+    from services.token_service import TokenService
+
+    servico = TokenService("chave-a", 60)
+    token = servico.issue(SimpleNamespace(id=7, password="hash-original"))
+    assert servico.verify(token, {7: SimpleNamespace(id=7, password="hash-original")}.get).id == 7
+    assert servico.verify(token, {7: SimpleNamespace(id=7, password="hash-apos-troca")}.get) is None
+    assert servico.verify(token, {7: SimpleNamespace(id=7, password="hash-da-conta-nova")}.get) is None
+    assert servico.verify(token, {}.get) is None
+    payload = URLSafeTimedSerializer("chave-a", salt="auth-token").loads(token)
+    assert "hash-original" not in str(payload)
+    sem_impressao = URLSafeTimedSerializer("chave-a", salt="auth-token").dumps({"user_id": 7})
+    assert servico.verify(sem_impressao, {7: SimpleNamespace(id=7, password="hash-original")}.get) is None
 
 
 def test_limite_de_login_libera_apos_a_janela():
@@ -205,6 +225,62 @@ def test_dependencias_diretas_fixadas_na_versao_instalada():
         assert f"{pacote}=={version(pacote)}" in declaradas
 
 
+def test_contagens_por_status_e_atraso_respeitam_o_responsavel(app_memoria):
+    from database import db
+    from models.task import Task
+    from models.user import User
+    from services import task_service
+    from utils.clock import utcnow
+
+    dono = User(name="Dono", email="dono@teste.com", password="x")
+    outro = User(name="Outro", email="outro@teste.com", password="x")
+    db.session.add_all([dono, outro])
+    db.session.commit()
+    ontem = utcnow() - timedelta(days=1)
+    db.session.add_all([
+        Task(title="Pendente atrasada", status="pending", user_id=dono.id, due_date=ontem),
+        Task(title="Em andamento", status="in_progress", user_id=dono.id),
+        Task(title="Concluida", status="done", user_id=dono.id, due_date=ontem),
+        Task(title="Cancelada", status="cancelled", user_id=dono.id),
+        Task(title="Alheia atrasada 1", status="pending", user_id=outro.id, due_date=ontem),
+        Task(title="Alheia atrasada 2", status="in_progress", user_id=outro.id, due_date=ontem),
+        Task(title="Alheia concluida", status="done", user_id=outro.id),
+    ])
+    db.session.commit()
+
+    assert task_service.get_stats(dono.id) == {
+        "total": 4, "pending": 1, "in_progress": 1, "done": 1, "cancelled": 1,
+        "overdue": 1, "completion_rate": 25.0,
+    }
+    geral = task_service.get_stats()
+    assert (geral["pending"], geral["in_progress"], geral["done"], geral["overdue"]) == (2, 2, 2, 3)
+
+
+@pytest.mark.parametrize("valor", [2.5, 2.0, True, False, "2", None])
+def test_prioridade_aceita_somente_inteiro_na_faixa(valor):
+    from utils.errors import AppError
+    from validators.task_validator import parse_new_task, parse_task_update
+
+    for analisar, dados in ((parse_new_task, {"title": "Titulo valido", "priority": valor}), (parse_task_update, {"priority": valor})):
+        with pytest.raises(AppError) as erro:
+            analisar(dados)
+        assert erro.value.status == 400
+    assert parse_task_update({"priority": 2})["priority"] == 2
+
+
+def test_texto_com_surrogate_isolado_e_rejeitado():
+    from utils.errors import AppError
+    from validators.category_validator import parse_category_update
+    from validators.task_validator import parse_new_task
+    from validators.user_validator import parse_credentials
+
+    for analisar, dados in ((parse_new_task, {"title": "abc\ud800"}), (parse_new_task, {"title": "Valido", "tags": ["\udfff"]}),
+                            (parse_category_update, {"name": "\ud800"}), (parse_credentials, {"email": "a@b.com", "password": "\ud800x"})):
+        with pytest.raises(AppError) as erro:
+            analisar(dados)
+        assert erro.value.status == 400
+
+
 # ---------- CT-08 (F-018): limite padrão ----------
 
 def test_listagem_limita_a_100_itens_por_padrao(app_memoria):
@@ -219,7 +295,7 @@ def test_listagem_limita_a_100_itens_por_padrao(app_memoria):
     db.session.add_all([Task(title=f"Task {n}", user_id=usuario.id) for n in range(101)])
     db.session.commit()
 
-    token = app_memoria.extensions["token_service"].issue(usuario.id)
+    token = app_memoria.extensions["token_service"].issue(usuario)
     cabecalho = {"Authorization": f"Bearer {token}"}
     cliente = app_memoria.test_client()
     assert len(cliente.get("/tasks", headers=cabecalho).get_json()) == 100

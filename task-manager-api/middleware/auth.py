@@ -10,8 +10,7 @@ def _user_from_request():
     scheme, _, token = request.headers.get('Authorization', '').partition(' ')
     if scheme.lower() != 'bearer' or not token.strip():
         return None
-    user_id = current_app.extensions['token_service'].verify(token.strip())
-    return find_active_user(user_id) if user_id is not None else None
+    return current_app.extensions['token_service'].verify(token.strip(), find_active_user)
 
 
 def current_user():
