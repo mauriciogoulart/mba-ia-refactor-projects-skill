@@ -49,16 +49,16 @@ Passo a passo seguido para resolver o desafio, com os artefatos gerados em cada 
    Plano de ação gerado: [04-plano-acao-criacao-skill.md](04-plano-acao-criacao-skill.md).
 
 8. Executada a skill no projeto `code-smells-project` para validação. Passou em todos os itens, mas a revisão gerou alguns pontos de atenção.
-   [validacoes/validacao-project-1_2026-11-05_v1.md](validacoes/validacao-project-1_2026-11-05_v1.md)
+   [validacao-project-1_2026-11-05_v1.md](../../historico/entrega-v1/validacoes/validacao-project-1_2026-11-05_v1.md)
 
 9. Executada a segunda versão da skill no projeto `code-smells-project` para validação. Passou em todos os itens, sem considerações ou pontos de atenção bloqueantes.
-   [validacoes/validacao-project-1_2026-11-05_v2.md](validacoes/validacao-project-1_2026-11-05_v2.md)
+   [validacao-project-1_2026-11-05_v2.md](../../historico/entrega-v1/validacoes/validacao-project-1_2026-11-05_v2.md)
 
 10. Executada a segunda versão da skill no projeto `ecommerce-api-legacy` para validação. Passou em todos os itens, com uma ressalva relacionada à opção que escolhi manualmente ao ser perguntado: manter os endpoints atuais, sem quebrar o contrato, para demonstrar que a skill permite escolher.
-    [validacoes/validacao-project-2_2026-11-06_v2.md](validacoes/validacao-project-2_2026-11-06_v2.md)
+    [validacao-project-2_2026-11-06_v2.md](../../historico/entrega-v1/validacoes/validacao-project-2_2026-11-06_v2.md)
 
 11. Executada a segunda versão da skill no projeto `task-manager-api` para validação. Passou em todos os itens, sem pontos de atenção bloqueantes.
-    [validacoes/validacao-project-3_2026-11-06_v2.md](validacoes/validacao-project-3_2026-11-06_v2.md)
+    [validacao-project-3_2026-11-06_v2.md](../../historico/entrega-v1/validacoes/validacao-project-3_2026-11-06_v2.md)
 
 12. Exemplo de prompt utilizado para validar o resultado da refatoração de cada projeto com base nas evidências geradas pela skill:
 
@@ -103,3 +103,19 @@ Passo a passo seguido para resolver o desafio, com os artefatos gerados em cada 
     - [ ] Endpoints originais respondem corretamente
     </Checklist de Validação>
     ```
+
+## Revisão pós-avaliação (entrega v2)
+
+13. A primeira entrega foi avaliada e recebeu uma solicitação de correção sobre o `ecommerce-api-legacy`: a opção de manter o contrato deixou CRITICAL abertos e o pagamento simulado continuava aprovando cartões iniciados em "4".
+
+14. Analisei a solicitação e os artefatos gerados. Rodar a skill novamente não bastaria: o pagamento simulado ficava residual em qualquer opção, então a própria skill precisava mudar.
+
+15. Arquivei a entrega v1 em [historico/entrega-v1/](../../historico/entrega-v1/LEIA-ME.md), com a tag `entrega-v1`.
+
+16. Criei a skill 1.2: pergunta de contrato com 3 opções (Refatorar, Manter contrato* e Híbrido), segunda confirmação para CRITICAL/HIGH sem correção, novo padrão P-20 para pagamento, testes de prova e execução local autenticada. Um agente independente revisou a skill antes da execução, e os pontos apontados foram corrigidos.
+
+17. Restaurei o código original dos 3 projetos e executei a skill 1.2 em cada um, respondendo "Refatorar". Resultado: 0 CRITICAL/HIGH sem correção nos 3 projetos.
+
+18. Cada execução foi validada por um agente independente, sem contexto da execução: [projeto 1](validacoes/validacao-project-1_2026-11-16_v3.md), [projeto 2](validacoes/validacao-project-2_2026-11-18_v3.md) e [projeto 3](validacoes/validacao-project-3_2026-11-18_v3.md).
+
+O controle item a item está em [05-controle-entrega-v2.md](05-controle-entrega-v2.md).

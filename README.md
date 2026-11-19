@@ -2,26 +2,55 @@
 
 Solução do desafio **"Criação de Skills — Refatoração Arquitetural Automatizada"** (enunciado original em [docs/DESAFIO.md](docs/DESAFIO.md)).
 
-A skill `refactor-arch` (Claude Code) analisa uma codebase de backend, audita anti-patterns e vulnerabilidades com severidade, arquivo e linha, gera um relatório, **pausa para confirmação** e, após aprovação, refatora para MVC e valida com evidências reais de execução. Foi executada, sem nenhuma alteração entre um projeto e outro, nos 3 projetos do repositório.
+A skill `refactor-arch` (Claude Code) analisa uma codebase de backend, audita anti-patterns e vulnerabilidades com severidade, arquivo e linha, gera um relatório, **pausa para confirmação** e, após aprovação, refatora para MVC e valida com evidências reais de execução. Esta é a **entrega v2**: a skill foi revisada (versão 1.2) e executada nos 3 projetos a partir do código-fonte original.
 
 ## Critérios de aceite (3/3 projetos)
 
 | Critério | code-smells-project (Python/Flask) | ecommerce-api-legacy (Node/Express) | task-manager-api (Python/Flask) |
 |---|---|---|---|
 | Fase 1 detecta stack corretamente | ✅ Python 3.14 + Flask 3.1.1 | ✅ Node.js 24 + Express 4.22.1 | ✅ Python 3.14 + Flask 3.0.0 / Flask-SQLAlchemy |
-| Fase 2 encontra >= 5 findings | ✅ 31 | ✅ 25 | ✅ 28 |
-| Fase 2 inclui >= 1 CRITICAL ou HIGH | ✅ 9 CRITICAL, 6 HIGH | ✅ 8 CRITICAL, 5 HIGH | ✅ 7 CRITICAL, 4 HIGH |
-| Fase 3: aplicação funciona após refatoração | ✅ 35/35 testes | ✅ 8/8 testes + boot + `api.http` | ✅ 35/35 testes |
+| Fase 2 encontra >= 5 findings | ✅ 31 | ✅ 25 | ✅ 28 (+1 na reauditoria) |
+| Fase 2 inclui >= 1 CRITICAL ou HIGH | ✅ 9 CRITICAL, 6 HIGH | ✅ 6 CRITICAL, 7 HIGH | ✅ 7 CRITICAL, 4 HIGH |
+| Fase 3: aplicação funciona após refatoração | ✅ 51/51 testes + execução local | ✅ 33/33 testes + `api.http` + execução local | ✅ 141/141 testes + execução local |
+| CRITICAL/HIGH sem correção ao final | 0 | 0 | 0 |
 | Relatório | [audit-project-1.md](reports/audit-project-1.md) | [audit-project-2.md](reports/audit-project-2.md) | [audit-project-3.md](reports/audit-project-3.md) |
 
 ## Sumário
 
+- [Revisão pós-avaliação (entrega v2)](#revisão-pós-avaliação-entrega-v2)
 - [Processo: como o desafio foi resolvido](#processo-como-o-desafio-foi-resolvido)
 - [A) Análise Manual](#a-análise-manual)
 - [B) Construção da Skill](#b-construção-da-skill)
 - [C) Resultados](#c-resultados)
 - [D) Como Executar](#d-como-executar)
 - [Estrutura do repositório](#estrutura-do-repositório)
+
+---
+
+## Revisão pós-avaliação (entrega v2)
+
+A primeira entrega foi avaliada e recebeu esta solicitação de correção:
+
+> No ecommerce-api-legacy, a Fase 3 rodou com a opção de manter o contrato e deixou três CRITICAL do próprio relatório abertos: as rotas de relatório financeiro e de exclusão de usuário continuam sem autenticação, o checkout continua sem verificar a senha da conta existente e o gateway simulado continua aprovando como PAID qualquer cartão que começa com "4". Ajuste a skill para que a opção de manter o contrato não possa deixar CRITICAL ou HIGH sem correção, acrescente ao playbook um padrão que resolva de fato o pagamento simulado (o P-09 hoje só isola esse código) e rode a skill de novo nesse projeto.
+
+| Ponto solicitado | O que foi feito | Evidência |
+|---|---|---|
+| Rotas de relatório financeiro e exclusão sem autenticação | Exigem `Authorization: Bearer <ADMIN_API_KEY>`; sem a variável definida, negam tudo | F-003 em [audit-project-2.md](reports/audit-project-2.md); [E-08](reports/evidence/project-2/20261116-213657/E-08-final-execucao-local.log) |
+| Checkout sem verificar a senha da conta existente | Senha verificada com scrypt; ausente ou incorreta responde 401 e nada é gravado | F-008; E-08 |
+| Gateway simulado aprovando cartão iniciado em "4" | Novo padrão **P-20**: recusa por padrão sem provedor configurado; mock só com `PAYMENT_PROVIDER=mock` e `APP_ENV` em `test`/`development` | F-002; [P-20](ecommerce-api-legacy/.claude/skills/refactor-arch/references/05-playbook-refatoracao.md); E-08 |
+| Opção de manter o contrato deixando CRITICAL/HIGH abertos | Regra nova na skill (detalhe abaixo) | [07-politica-comandos-aprovacoes.md](ecommerce-api-legacy/.claude/skills/refactor-arch/references/07-politica-comandos-aprovacoes.md), seção 4 |
+| Rodar a skill de novo no projeto | Executada a partir do código original, nos 3 projetos | [Validação do projeto 2](docs/evidencias-adicionais/validacoes/validacao-project-2_2026-11-18_v3.md) |
+
+**O que mudou na skill (1.1 → 1.2):**
+
+- **Pergunta de contrato com 3 opções:** `Refatorar` (primeira e recomendada), `Manter contrato*` e `Híbrido` (corrige CRITICAL/HIGH com a menor mudança de contrato e mantém o resto).
+- **Piso de segurança:** `Refatorar` e `Híbrido` não terminam com CRITICAL/HIGH aberto. `Manter contrato*` informa quantos ficarão sem correção, exige uma **segunda confirmação** com a lista dos findings, e o veredito recebe o sufixo `COM RESSALVAS DE SEGURANÇA`.
+- **P-20:** o pagamento simulado passa a ser corrigido em **todas** as opções, inclusive em `Manter contrato*`.
+- **Provas:** toda correção CRITICAL/HIGH ganha teste de unidade ou integração, e os endpoints são executados localmente com credenciais geradas pela própria aplicação (degrau V4), antes e depois da refatoração.
+
+> **Decisão de projeto declarada:** a opção `Manter contrato*` continua disponível. Ela só deixa CRITICAL/HIGH sem correção por escolha explícita, com aviso e segunda confirmação; autenticação em rota aberta não tem como ser corrigida sem mudar o contrato. As 3 execuções desta entrega usaram `Refatorar`, então esse caminho não foi exercitado de ponta a ponta: o aviso aparece nos relatórios, em "Resumo para a pergunta".
+
+**Onde está a entrega anterior:** [historico/entrega-v1/](historico/entrega-v1/LEIA-ME.md) guarda relatórios, evidências, validações e README da v1. A tag git `entrega-v1` aponta para o repositório como foi entregue. O passo a passo desta revisão está em [05-controle-entrega-v2.md](docs/evidencias-adicionais/05-controle-entrega-v2.md).
 
 ---
 
@@ -34,12 +63,12 @@ Linha do tempo completa em [00-timeline-execucao-desafio.md](docs/evidencias-adi
 | 1 | Leitura do desafio para entender objetivo, entregáveis e critérios de aceite | [docs/DESAFIO.md](docs/DESAFIO.md) |
 | 2 | Análise manual dos 3 projetos (com apoio de IA, ver nota na seção A) | [01-relatorio-issues-analise-manual.md](docs/evidencias-adicionais/01-relatorio-issues-analise-manual.md) |
 | 3 | Levantamento de como executar cada projeto e criação de **testes de caracterização** caixa-preta via HTTP (baseline para comparar antes/depois) | [02-relatorio-analise-execucao-testes.md](docs/evidencias-adicionais/02-relatorio-analise-execucao-testes.md) |
-| 4 | Análise e decisões arquiteturais da skill (fases, referências, rubrica, validação, agnosticismo, riscos) | [03-analise-arquitetural-skill.md](docs/evidencias-adicionais/03-analise-arquitetural-skill.md) |
-| 5 | Refinamento do escopo com IA (validação com evidências reais, aderência ao enunciado, imparcialidade, agnosticismo) e plano de ação | [04-plano-acao-criacao-skill.md](docs/evidencias-adicionais/04-plano-acao-criacao-skill.md) |
-| 6 | Criação da skill com Claude Code (v1) e primeira execução no projeto 1 | [validacao-project-1 v1](docs/evidencias-adicionais/validacoes/validacao-project-1_2026-11-05_v1.md) |
-| 7 | Ajustes na skill (v1.1) a partir dos pontos de atenção da v1 e nova execução no projeto 1 | [validacao-project-1 v2](docs/evidencias-adicionais/validacoes/validacao-project-1_2026-11-05_v2.md) |
-| 8 | Execução da mesma skill nos projetos 2 e 3 | [validacao-project-2](docs/evidencias-adicionais/validacoes/validacao-project-2_2026-11-06_v2.md) · [validacao-project-3](docs/evidencias-adicionais/validacoes/validacao-project-3_2026-11-06_v2.md) |
-| 9 | Validação independente de cada execução contra os critérios de aceite e o checklist (prompt no passo 12 da timeline) | pasta [validacoes/](docs/evidencias-adicionais/validacoes/) |
+| 4 | Análise e decisões arquiteturais da skill | [03-analise-arquitetural-skill.md](docs/evidencias-adicionais/03-analise-arquitetural-skill.md) |
+| 5 | Refinamento do escopo com IA e plano de ação | [04-plano-acao-criacao-skill.md](docs/evidencias-adicionais/04-plano-acao-criacao-skill.md) |
+| 6 | Skill v1.0 e v1.1, execução nos 3 projetos e primeira entrega | [historico/entrega-v1/](historico/entrega-v1/LEIA-ME.md) |
+| 7 | Avaliação, arquivamento da v1 e skill 1.2, com revisão independente antes de executar | [05-controle-entrega-v2.md](docs/evidencias-adicionais/05-controle-entrega-v2.md) |
+| 8 | Restauração do código original e nova execução nos 3 projetos | [reports/](reports/) |
+| 9 | Validação independente de cada execução, por agentes sem contexto da execução | [validacoes/](docs/evidencias-adicionais/validacoes/) |
 
 ---
 
@@ -106,11 +135,11 @@ Abaixo, os principais problemas de cada projeto.
 
 ## B) Construção da Skill
 
-Skill: [`.claude/skills/refactor-arch/`](code-smells-project/.claude/skills/refactor-arch/) — cópia idêntica (verificada com `diff -r`) em [ecommerce-api-legacy](ecommerce-api-legacy/.claude/skills/refactor-arch/) e [task-manager-api](task-manager-api/.claude/skills/refactor-arch/). Documentos de projeto da skill: [03-analise-arquitetural-skill.md](docs/evidencias-adicionais/03-analise-arquitetural-skill.md) e [04-plano-acao-criacao-skill.md](docs/evidencias-adicionais/04-plano-acao-criacao-skill.md).
+Skill: [`.claude/skills/refactor-arch/`](code-smells-project/.claude/skills/refactor-arch/) — cópia idêntica em [ecommerce-api-legacy](ecommerce-api-legacy/.claude/skills/refactor-arch/) e [task-manager-api](task-manager-api/.claude/skills/refactor-arch/). Documentos de projeto: [03-analise-arquitetural-skill.md](docs/evidencias-adicionais/03-analise-arquitetural-skill.md) e [04-plano-acao-criacao-skill.md](docs/evidencias-adicionais/04-plano-acao-criacao-skill.md).
 
 ### Decisões de design
 
-**`SKILL.md` curto como orquestrador (78 linhas) + conhecimento em referências carregadas por fase.** Cada fase lê só o que precisa, o que reduz contexto e evita que o agente "adiante" a refatoração:
+**`SKILL.md` curto como orquestrador + conhecimento em referências carregadas por fase.** Cada fase lê só o que precisa, o que reduz contexto e evita que o agente adiante a refatoração:
 
 | Fase | O que faz | Referências lidas |
 |---|---|---|
@@ -122,21 +151,21 @@ Skill: [`.claude/skills/refactor-arch/`](code-smells-project/.claude/skills/refa
 
 | Área de conhecimento | Arquivo | Conteúdo |
 |---|---|---|
-| Análise de projeto | [01-analise-projeto.md](code-smells-project/.claude/skills/refactor-arch/references/01-analise-projeto.md) | manifestos/lockfiles, framework e versão, banco, domínio, classificação de arquitetura por papel, superfície de ataque, inventário de validação, descoberta de comandos |
+| Análise de projeto | [01-analise-projeto.md](code-smells-project/.claude/skills/refactor-arch/references/01-analise-projeto.md) | manifestos, framework e versão, banco, domínio, arquitetura por papel, superfície de ataque, inventário de validação e de credenciais de teste |
 | Catálogo de anti-patterns | [02-catalogo-antipatterns.md](code-smells-project/.claude/skills/refactor-arch/references/02-catalogo-antipatterns.md) | 42 entradas com sinal de detecção, "NÃO é finding", "como confirmar", severidade e rubrica |
 | Template de relatório | [03-template-relatorio.md](code-smells-project/.claude/skills/refactor-arch/references/03-template-relatorio.md) | blocos `PHASE 1`, `ARCHITECTURE AUDIT REPORT`, anexo da Fase 3 e `PHASE 3: REFACTORING COMPLETE` |
-| Guidelines de arquitetura | [04-guidelines-mvc.md](code-smells-project/.claude/skills/refactor-arch/references/04-guidelines-mvc.md) | papéis das camadas, regras de dependência, estrutura-alvo, adaptação ao nível de organização, checklist de estrutura |
-| Playbook de refatoração | [05-playbook-refatoracao.md](code-smells-project/.claude/skills/refactor-arch/references/05-playbook-refatoracao.md) | 19 padrões (P-01…P-19) com código **antes/depois** em Python e JavaScript |
-| *Adicional:* protocolo de validação | [06-protocolo-validacao.md](code-smells-project/.claude/skills/refactor-arch/references/06-protocolo-validacao.md) | escada de validação, baseline × final, formato de evidência `E-nn`, política de alteração de testes, prova vermelho/verde |
-| *Adicional:* política de comandos e aprovações | [07-politica-comandos-aprovacoes.md](code-smells-project/.claude/skills/refactor-arch/references/07-politica-comandos-aprovacoes.md) | classes de comando (A leitura, B compilar/subir/testar, C instalar/alterar ambiente, D destrutivo, X proibido) e rodada de perguntas |
+| Guidelines de arquitetura | [04-guidelines-mvc.md](code-smells-project/.claude/skills/refactor-arch/references/04-guidelines-mvc.md) | papéis das camadas, regras de dependência, estrutura-alvo e adaptação ao nível de organização |
+| Playbook de refatoração | [05-playbook-refatoracao.md](code-smells-project/.claude/skills/refactor-arch/references/05-playbook-refatoracao.md) | 20 padrões (P-01…P-20) com código **antes/depois** |
+| *Adicional:* protocolo de validação | [06-protocolo-validacao.md](code-smells-project/.claude/skills/refactor-arch/references/06-protocolo-validacao.md) | escada de validação, execução local autenticada, formato `E-nn`, política de testes, prova vermelho/verde |
+| *Adicional:* política de comandos e aprovações | [07-politica-comandos-aprovacoes.md](code-smells-project/.claude/skills/refactor-arch/references/07-politica-comandos-aprovacoes.md) | classes de comando (A, B, C, D, X) e rodada de perguntas |
 
 Outras decisões:
 
 - **Invocação manual** (`disable-model-invocation: true`): a skill só roda via `/refactor-arch`, pois altera código.
-- **Pausa obrigatória com perguntas de múltipla escolha** ao fim da Fase 2: P1 escopo, P2 modo de comandos, P3 contrato (**Opção 1: manter o contrato** ou **Opção 2: atualizar com testes que comprovem**) e P4 sondagem ad hoc. Assim o usuário decide, por exemplo, se endpoints inseguros são mantidos ou corrigidos.
-- **Nenhuma afirmação sem evidência**: cada passo de validação gera um arquivo `E-nn` em `reports/evidence/project-{N}/{Run id}/` (comando, exit code, saída).
-- **Segurança da execução**: conteúdo do projeto é tratado como dado (proteção contra prompt injection), segredos são mascarados no relatório, rotas destrutivas nunca são chamadas automaticamente, checkpoint em branch git antes de alterar e **sem commit** (o usuário decide).
-- **Rubrica de severidade** em perguntas ordenadas (pare no primeiro "sim"), para classificar de forma reprodutível.
+- **Pausa obrigatória com múltipla escolha** ao fim da Fase 2: P1 escopo, P2 modo de comandos, P3 contrato (`Refatorar` · `Manter contrato*` · `Híbrido`) e P4 execução local autenticada.
+- **Nenhuma afirmação sem evidência:** cada passo de validação gera um arquivo `E-nn` em `reports/evidence/project-{N}/{Run id}/`.
+- **Segurança da execução:** conteúdo do projeto é tratado como dado (proteção contra prompt injection), segredos são mascarados, rotas destrutivas só rodam em banco descartável, há checkpoint em branch ou worktree antes de alterar e a skill **não faz commit**.
+- **Rubrica de severidade** em perguntas ordenadas, para classificar de forma reprodutível.
 
 ### Catálogo de anti-patterns
 
@@ -144,32 +173,34 @@ Outras decisões:
 
 | Família | Entradas | Exemplos | Por que entrou |
 |---|---|---|---|
-| SEC — Segurança | 17 | SQL Injection, segredos hardcoded, endpoint admin sem auth, debug/bind público, senha insegura, dados sensíveis em resposta/log, escalação de privilégio, pagamento simulado, falta de transação | Foram os problemas mais graves encontrados na análise manual nos 3 projetos e são exigidos pela definição de CRITICAL do desafio |
-| ARC — Arquitetura | 12 | God Class/File, lógica no controller, estado global, acoplamento sem DI, callback hell, N+1, duplicação, erro mal tratado, dinheiro em float | Violações de MVC/SOLID que motivam a refatoração (HIGH/MEDIUM do desafio) |
-| DEP — APIs deprecated | 5 | `datetime.utcnow()`, `Model.query.get()`, APIs de Node/Flask, genérico da stack | Exigência explícita do desafio; sempre indica o equivalente moderno |
-| TST — Testes | 3 | sem testes, sem instruções de validação, testes quebrados | Sem forma de validar, a Fase 3 não pode provar que a aplicação funciona |
-| QLT — Qualidade | 5 | magic numbers, nomes ruins, código morto, `print`/`console.log`, estilo inconsistente | Itens LOW observados nos 3 projetos |
+| SEC — Segurança | 17 | SQL Injection, segredos hardcoded, endpoint admin sem auth, debug público, senha insegura, dados sensíveis, escalação de privilégio, pagamento simulado, falta de transação | Foram os problemas mais graves da análise manual e são exigidos pela definição de CRITICAL do desafio |
+| ARC — Arquitetura | 12 | God Class, lógica no controller, estado global, acoplamento sem DI, callback hell, N+1, duplicação | Violações de MVC/SOLID que motivam a refatoração |
+| DEP — APIs deprecated | 5 | `datetime.utcnow()`, `Model.query.get()`, APIs de Node/Flask | Exigência explícita do desafio; sempre indica o equivalente moderno |
+| TST — Testes | 3 | sem testes, sem instruções de validação, testes quebrados | Sem forma de validar, a Fase 3 não prova que a aplicação funciona |
+| QLT — Qualidade | 5 | magic numbers, nomes ruins, código morto, `print`/`console.log`, estilo | Itens LOW observados nos 3 projetos |
 
 ### Como a skill é agnóstica de tecnologia
 
-1. **Sinal semântico, não sintaxe**: cada entrada descreve *o que* procurar (ex.: "dado externo chega a um sink de consulta sem parametrização"); exemplos por linguagem são atalhos. Stack não listada ⇒ a skill deriva o equivalente e marca `derivado`.
-2. **Arquitetura classificada por papel do código**, não por nome de pasta — a mesma regra trata `AppManager.js` (tudo numa classe) e `routes/` do Flask.
+1. **Sinal semântico, não sintaxe:** cada entrada descreve *o que* procurar; exemplos por linguagem são atalhos. Stack não listada ⇒ a skill deriva o equivalente e marca `derivado`.
+2. **Arquitetura classificada por papel do código**, não por nome de pasta.
 3. **Comandos descobertos no projeto** (manifestos, README, scripts, testes, `api.http`), nunca embutidos na skill.
-4. **Guidelines MVC adaptáveis**: estrutura-alvo de referência e regra "seguir a convenção do framework"; monólito ⇒ criar camadas; parcialmente organizado ⇒ mover só o que está fora do lugar.
-5. **Escada de validação** que degrada com aviso: testes do projeto → scripts → boot + requisições existentes → sondagem ad hoc → verificação estática.
+4. **Guidelines MVC adaptáveis:** monólito ⇒ criar camadas; parcialmente organizado ⇒ mover só o que está fora do lugar.
+5. **Escada de validação** que degrada com aviso: testes do projeto → scripts → boot + requisições existentes → execução local autenticada → verificação estática.
 6. **Nenhuma referência aos projetos de exemplo** dentro da skill.
-7. **Prova**: a mesma skill, sem alteração, rodou em Flask monolítico, Express com God Class e Flask parcialmente em camadas.
+7. **Prova:** a mesma skill rodou em Flask monolítico, Express com God Class e Flask parcialmente em camadas.
 
 ### Desafios encontrados e como foram resolvidos
 
 | Desafio | Solução |
 |---|---|
-| Os projetos não tinham testes; sem baseline não há como provar que "continua funcionando" | Antes da skill, criei suítes de caracterização caixa-preta via HTTP (23 / 8 / 25 testes) e confirmei que detectam regressões alterando temporariamente uma regra ([relatório](docs/evidencias-adicionais/02-relatorio-analise-execucao-testes.md)). A skill usa os testes existentes como degrau principal de validação |
-| Pouca familiaridade com Python e Node | Análise manual com apoio de IA e skill construída para atuar como "dev novo no projeto": descobre tudo lendo o código, sem presumir |
-| Corrigir CRITICALs de segurança muda o contrato da API, mas o desafio pede que os endpoints originais continuem respondendo | Pergunta P3 com duas opções explícitas. Na Opção 2, os testes originais continuam passando (só autenticação adicionada na fixture) e testes de contrato novos provam cada mudança: **verdes** no código novo e **vermelhos** no código original (checkpoint) |
-| v1 da skill: bloco da Fase 1 não ficava registrado; regra "nunca edite testes" conflitava com contrato aprovado; senhas de seed continuavam no fonte ([pontos de atenção da v1](docs/evidencias-adicionais/validacoes/validacao-project-1_2026-11-05_v1.md)) | v1.1 (commit `5303107`, 7 arquivos, +193/−48): evidência `E-00` da Fase 1; política de alteração de testes com snapshot, diff e justificativa; testes de contrato com prova vermelho/verde; senhas de seed como finding e via `SEED_*`; legenda `[x]`/`[~]`/`[ ]` no checklist |
-| Ambiente Windows: reloader do Flask mantém processo filho na porta, porta 5000 compartilhada por dois projetos, encoding do console, comandos Bash com aspas aninhadas falhando no agente | Encerramento da árvore de processos, um projeto por vez, `PYTHONIOENCODING=utf-8`, e scripts temporários fora do projeto quando o shell falhava (registrado em "Observações da execução" dos relatórios) |
-| Risco de linhas "alucinadas" e falsos positivos | Procedimento obrigatório de reler o trecho antes de reportar, campo "NÃO é finding" e seção "Descartados" no relatório; em cada validação, amostras das referências de linha foram conferidas contra o commit original |
+| Os projetos não tinham testes; sem baseline não há como provar que "continua funcionando" | Antes da skill, criei suítes de caracterização caixa-preta via HTTP (23 / 8 / 25 testes) ([relatório](docs/evidencias-adicionais/02-relatorio-analise-execucao-testes.md)) |
+| Pouca familiaridade com Python e Node | Análise manual com apoio de IA e skill construída para atuar como "dev novo no projeto" |
+| Corrigir CRITICAL de segurança muda o contrato da API, mas o desafio pede que os endpoints continuem respondendo | Pergunta P3 explícita; os testes originais continuam válidos com credencial de teste e testes novos provam cada mudança: **verdes** no código novo e **vermelhos** no original |
+| v1.0: Fase 1 sem registro, regra "nunca edite testes" em conflito com contrato aprovado, senhas de seed no fonte ([pontos de atenção](historico/entrega-v1/validacoes/validacao-project-1_2026-11-05_v1.md)) | v1.1: evidência `E-00`, política de alteração de testes, prova vermelho/verde e senhas por `SEED_*` |
+| v1.1: a opção de manter o contrato deixou CRITICAL abertos e o P-09 apenas isolava o pagamento simulado (avaliação da entrega) | v1.2: 3 opções na P3, segunda confirmação, P-20, testes de prova em qualquer opção e execução local autenticada |
+| Revisão independente da v1.2 apontou fail-open no P-20 e contradições de política antes da execução | Mock só por lista branca de ambiente, nunca como padrão; exceção explícita para o diretório temporário; status `ALTERADO (correção F-xxx, sem contrato)` |
+| Reauditoria do task-manager-api achou um HIGH novo (usuário comum acessando dados de terceiros), e a validação independente reprovou duas vezes (leituras de tasks abertas; token de conta excluída reaproveitado pelo mesmo id) | A skill parou e perguntou; a correção C-17 / CT-09 foi incluída e completada após cada reprovação, com o token vinculado à conta, repetindo toda a validação |
+| Ambiente Windows: reloader do Flask, porta 5000 compartilhada, encoding, comandos com aspas aninhadas | Encerramento da árvore de processos, um projeto Flask por vez e scripts temporários fora do projeto |
 
 ---
 
@@ -179,106 +210,107 @@ Outras decisões:
 
 | Projeto | CRITICAL | HIGH | MEDIUM | LOW | Total | Ocorrências | Deprecated |
 |---|---:|---:|---:|---:|---:|---:|---|
-| code-smells-project | 9 | 6 | 10 | 6 | **31** | 159 | buscadas; nenhuma para Flask 3.1.1 / Python 3.14 |
-| ecommerce-api-legacy | 8 | 5 | 7 | 5 | **25** | 55 | buscadas; nenhuma para Express 4.22 / Node 24 |
-| task-manager-api | 7 | 4 | 11 | 6 | **28** | 189 | F-021 `datetime.utcnow()`, F-022 `Query.get()` |
+| code-smells-project | 9 | 6 | 10 | 6 | **31** | 146 | buscadas; nenhuma para Flask 3.1.1 / Python 3.14 |
+| ecommerce-api-legacy | 6 | 7 | 7 | 5 | **25** | 53 | buscadas; nenhuma para Express 4.22 / Node 24 |
+| task-manager-api | 7 | 4 | 11 | 6 | **28** | 181 | F-021 `datetime.utcnow()`, F-022 `Query.get()` |
+
+No task-manager-api, a reauditoria acrescentou o **F-029** (HIGH, SEC-11), corrigido na mesma execução.
 
 ### Análise manual × skill
 
-No projeto 1, a skill encontrou praticamente todos os problemas da análise manual (o desafio pede no mínimo 5):
+No projeto 1, a skill encontrou os problemas da análise manual (o desafio pede no mínimo 5):
 
 | Análise manual | Finding da skill |
 |---|---|
-| CS-C1 SQL Injection | F-008 SEC-01 SQL Injection |
-| CS-C2 `/admin/query` executa SQL | F-005 SEC-04 Execução arbitrária de SQL |
-| CS-C3 reset do banco sem auth | F-004 SEC-03 Endpoints administrativos sem autenticação |
-| CS-C4 segredos hardcoded | F-001 SEC-02 Segredos hardcoded + F-006 SEC-07 dados sensíveis em respostas |
-| CS-C5 senhas em texto puro | F-007 SEC-06 Senhas em texto puro + F-006 |
-| CS-C6 debug e bind 0.0.0.0 | F-002 SEC-05 Modo debug e bind público |
-| CS-H1 regra de negócio em model/controller | F-014 ARC-02 + F-009 ARC-01 God File |
+| CS-C1 SQL Injection | F-008 SEC-01 |
+| CS-C2 `/admin/query` executa SQL | F-005 SEC-04 |
+| CS-C3 reset do banco sem auth | F-004 SEC-03 |
+| CS-C4 segredos hardcoded | F-001 SEC-02 + F-006 SEC-07 |
+| CS-C5 senhas em texto puro | F-007 SEC-06 + F-006 SEC-07 |
+| CS-C6 debug e bind 0.0.0.0 | F-002 SEC-05 |
+| CS-H1 regra de negócio em model/controller | F-014 ARC-02 + F-009 ARC-01 |
 | CS-H2 conexão global mutável | F-015 ARC-03 |
 | CS-H3 pedido sem transação | F-012 SEC-15 |
-| CS-H4 sem autenticação / CORS aberto | F-003 SEC-09 |
+| CS-H4 sem autenticação / CORS aberto | F-003 SEC-09 + F-016 SEC-17 |
 | CS-H5 acoplamento sem DI | F-013 ARC-04 |
 | CS-M1 N+1 | F-024 ARC-07 |
 | CS-M2 código duplicado | F-020 ARC-08 |
 | CS-M3 validações ausentes | F-010 SEC-12 |
 | CS-M4 detalhes internos nos erros | F-017 SEC-13 + F-019 ARC-09 |
-| CS-M5 dinheiro em float | F-023 ARC-12 |
-| CS-M6 schema sem constraints | F-022 ARC-10 |
-| CS-M7 cancelamento incompleto | F-025 OUTRO-01 |
-| CS-M8 sem paginação / `SELECT *` | F-021 ARC-11 |
-| CS-L1 magic numbers | F-029 QLT-01 |
-| CS-L2 nomes ruins | F-028 QLT-02 |
+| CS-M5 dinheiro em float | F-022 ARC-12 |
+| CS-M6 schema sem constraints | F-021 ARC-10 |
+| CS-M7 fluxo de status/cancelamento | F-025 OUTRO-01 (parcial: status de pedido inexistente) |
+| CS-M8 sem paginação / `SELECT *` | F-023 ARC-11 |
+| CS-L1 magic numbers | F-030 QLT-01 |
+| CS-L2 nomes ruins | F-029 QLT-02 |
 | CS-L3 imports não usados | F-031 QLT-03 |
-| CS-L4 `print` no lugar de logging | F-027 QLT-04 + F-011 SEC-08 (e-mail em log) |
-| CS-L6 estilo inconsistente | F-030 QLT-05 |
+| CS-L4 `print` no lugar de logging | F-027 QLT-04 + F-011 SEC-08 |
+| CS-L6 estilo inconsistente | F-028 QLT-05 |
 
-Nos projetos 2 e 3 os principais itens também foram detectados, por exemplo: EC-C1→F-005, EC-C2→F-002, EC-C3→F-003, EC-C4→F-006, EC-C5→F-004, EC-C6→F-007; TM-C1→F-001/F-003, TM-C2→F-005, TM-C3→F-004, TM-C4→F-002, TM-C5→F-006, TM-M7→F-021/F-022.
+Nos projetos 2 e 3 os principais itens também foram detectados: EC-C1→F-004, EC-C2→F-001, EC-C3→F-002, EC-C4→F-005, EC-C5→F-003, EC-C6→F-006; TM-C1→F-001/F-003, TM-C2→F-005, TM-C3→F-004, TM-C4→F-002, TM-C5→F-007, TM-M7→F-021/F-022.
 
-Algumas severidades da skill são mais altas que as da análise manual (ex.: CS-H4 HIGH → F-003 CRITICAL; CS-M3 MEDIUM → F-010 HIGH), porque a rubrica do catálogo classifica pelo impacto concreto (dado sensível exposto, ação sem autenticação) e não pela categoria do problema.
+As severidades podem diferir da análise manual (ex.: CS-H4 HIGH → F-003 CRITICAL) porque a rubrica do catálogo classifica pelo impacto concreto.
 
 ### Antes × depois da estrutura
 
-**code-smells-project** — 4 arquivos com papéis misturados → camadas MVC completas.
+**code-smells-project** — monólito de 4 arquivos → camadas MVC completas.
 
 ```
 ANTES                                   DEPOIS
 app.py         entry + config + rotas   app.py          composition root (create_app)
 controllers.py handlers + regra + SQL   config/         settings.py, logging_config.py
-models.py      SQL + regra + serializ.  database/       connection.py, schema.py, seed.py
-database.py    conexão global + seed    models/         produto_, usuario_, pedido_, sistema_model.py
-                                        services/       regras de negócio, auth, Decimal
-                                        controllers/    fluxo por domínio + validacao.py
-                                        views/          serializers.py (DTOs), respostas.py
-                                        routes/         blueprints por domínio
-                                        middlewares/    auth.py, error_handler.py, security.py
+models.py      SQL + regra + serializ.  database/       connection.py, schema.py
+database.py    conexão global + seed    models/         produto, usuario, pedido, admin
+                                        services/       regras de negócio, auth, dinheiro, erros
+                                        controllers/    fluxo por domínio + validators.py
+                                        routes/         blueprints + proteção por rota
+                                        views/          serializers.py (DTOs)
+                                        middlewares/    auth.py, errors.py, security.py
 ```
 
 **ecommerce-api-legacy** — God Class → camadas MVC em `src/`.
 
 ```
 ANTES                                   DEPOIS
-src/app.js                              src/app.js       composition root (createApp + start)
+src/app.js                              src/app.js       composition root + entry point
 src/AppManager.js  God Class            src/config/      settings.js, constants.js
 src/utils.js       config + cache +     src/database/    connection.js, schema.js
                    "crypto" + log       src/models/      user, course, enrollment, payment, auditLog, report
-                                        src/services/    checkout, password (scrypt), paymentGateway, report
+                                        src/services/    checkout, password, report, user, payment/gatewayFactory
                                         src/controllers/ checkout, report, user
                                         src/routes/      index.js
-                                        src/middlewares/ errorHandler, rateLimit, securityHeaders, validateCheckout
-                                        src/utils/       appError, logger, money
+                                        src/middlewares/ errorHandler, rateLimiter, requireAdmin, securityHeaders
+                                        src/validators/  checkoutValidator.js
+                                        src/errors/, src/utils/
 ```
 
-**task-manager-api** — camadas parciais → camadas completas, preservando as pastas existentes.
+**task-manager-api** — camadas parciais → camadas completas.
 
 ```
 ANTES                                   DEPOIS
 app.py          entry + config literal  app.py          composition root (create_app)
-models/         models + MD5 + to_dict  config/         settings.py, logging_config.py
+models/         models + MD5 + to_dict  config/         settings.py
 routes/         rotas + controller +    models/         entidades + consultas
-                regra + SQL + categorias services/      task, user, category, report, auth, notification
-services/       1 serviço sem uso       controllers/    fluxo por domínio + validators.py
-utils/          helpers sem uso         views/          serializers.py (DTOs sem senha)
-                                        routes/         só mapeamento (+ category_routes, system_routes)
-                                        middlewares/    auth.py, error_handler.py, security.py
-                                        utils/          constants.py, helpers.py (usados)
+                regra + SQL             validators/     common, task, user, category
+services/       1 serviço sem uso       services/       auth, token, task, user, category, report
+utils/          helpers sem uso         controllers/    auth, task, user, category, report
+                                        routes/         só mapeamento
+                                        views/          serializers.py (DTOs sem senha)
+                                        middleware/     auth, error_handler, security
 ```
 
 | Métrica | P1 antes → depois | P2 antes → depois | P3 antes → depois |
 |---|---|---|---|
-| Arquivos-fonte | 4 → 44 | 3 → 26 | 15 → 41 |
-| Linhas de código | ~780 → ~1257 | ~180 → ~566 | ~1158 → ~1483 |
-| Maior arquivo | `models.py` (314) → `controllers/validacao.py` (134) | `AppManager.js` (141) → `app.js` (71) | `routes/task_routes.py` (299) → `controllers/validators.py` (244) |
+| Arquivos-fonte | 4 → 35 | 3 → 28 | 15 → 45 |
+| Linhas de código | ~780 → ~1220 | ~180 → ~693 | ~1158 → ~1588 |
+| Maior arquivo | `models.py` (314) → `controllers/validators.py` (121) | `AppManager.js` (141) → `app.js` (78) | `routes/task_routes.py` (299) → `validators/task_validator.py` (136) |
 | Arquivos com 3+ papéis | 3 → 0 | 2 → 0 | 4 → 0 |
 | Rotas da API | 19 → 18 (`/admin/query` removida) | 3 → 3 | 22 → 22 |
-| Testes | 23 → 35 (23 originais + 12 de contrato) | 8 → 8 (inalterados) | 25 → 35 (25 originais + 10 de contrato) |
-
-Detalhes (mapa antigo → novo, mudanças aplicadas) no anexo "FASE 3" de cada relatório.
+| Testes | 23 → 51 (+9 unidade, +19 integração) | 8 → 33 (+18 unidade, +7 integração) | 25 → 141 (+42 unidade, +74 integração) |
 
 ### Checklist de validação
 
-`✅` atendido com evidência · `~` parcial (finding residual citado). Checklist completo, com a evidência de cada item, na seção "Checklist de Validação" de cada relatório e nas [validações independentes](docs/evidencias-adicionais/validacoes/).
+`✅` atendido com evidência · `~` parcial (finding residual citado). O checklist completo, com a evidência de cada item, está na seção "Checklist de Validação" de cada relatório.
 
 | Item | P1 | P2 | P3 |
 |---|:-:|:-:|:-:|
@@ -293,85 +325,89 @@ Detalhes (mapa antigo → novo, mudanças aplicadas) no anexo "FASE 3" de cada r
 | Detecção de APIs deprecated | ✅ nenhuma | ✅ nenhuma | ✅ 2 |
 | Skill pausa e pede confirmação antes da Fase 3 | ✅ | ✅ | ✅ |
 | **Fase 3** — Estrutura de diretórios segue MVC | ✅ | ✅ | ✅ |
-| Configuração extraída para módulo de config (sem hardcoded) | ✅ | ✅ | ~ (1) |
+| Configuração extraída para módulo de config (sem hardcoded) | ✅ | ✅ | ✅ |
 | Models criados para abstrair dados | ✅ | ✅ | ✅ |
 | Views/Routes separadas | ✅ | ✅ | ✅ |
 | Controllers concentram o fluxo | ✅ | ✅ | ✅ |
-| Error handling centralizado | ✅ | ~ (2) | ✅ |
+| Error handling centralizado | ✅ | ~ (1) | ✅ |
 | Entry point claro | ✅ | ✅ | ✅ |
 | Aplicação inicia sem erros | ✅ | ✅ | ✅ |
-| Endpoints originais respondem corretamente | ✅ (3) | ✅ | ✅ (3) |
+| Endpoints originais respondem corretamente | ✅ (2) | ✅ (2) | ✅ (2) |
 
-1. O código não tem mais segredos, mas os valores antigos seguem no histórico git (F-001): rotação manual recomendada.
-2. Handler central existe e é usado; `DELETE /api/users/:id` continua respondendo 200 mesmo com id inexistente, porque corrigir mudaria o contrato (Opção 1 escolhida).
-3. Com mudanças de contrato aprovadas (ver abaixo); os testes originais continuam passando.
+1. Handler central existe e é usado; erros continuam em texto e sucessos em JSON para preservar o formato (F-019, parcial).
+2. Com mudanças de contrato aprovadas (ver abaixo), comprovadas por testes e pela execução local.
 
 ### Evidências de execução (logs)
 
-Todas as evidências são geradas pela própria skill durante a execução:
-
-| Evidência | P1 — [20261105-175512](reports/evidence/project-1/20261105-175512/) | P2 — [20261106-131947](reports/evidence/project-2/20261106-131947/) | P3 — [20261106-140715](reports/evidence/project-3/20261106-140715/) |
+| Evidência | P1 — [20261116-195523](reports/evidence/project-1/20261116-195523/) | P2 — [20261116-213657](reports/evidence/project-2/20261116-213657/) | P3 — [20261116-214549](reports/evidence/project-3/20261116-214549/) |
 |---|---|---|---|
-| Fase 1 (bloco `PHASE 1`) | [E-00](reports/evidence/project-1/20261105-175512/E-00-fase1-analise.txt) | [E-00](reports/evidence/project-2/20261106-131947/E-00-fase1-analise.txt) | [E-00](reports/evidence/project-3/20261106-140715/E-00-fase1-analise.txt) |
-| Testes no código original (baseline) | [E-01](reports/evidence/project-1/20261105-175512/E-01-baseline-pytest.log) 23 passed | [E-01](reports/evidence/project-2/20261106-131947/E-01-baseline-npm-test.log) 8 pass | [E-01](reports/evidence/project-3/20261106-140715/E-01-baseline-pytest.log) 25 passed |
-| Rotas / boot / requisições (baseline) | [E-02](reports/evidence/project-1/20261105-175512/E-02-baseline-rotas.log) 19 rotas | [E-02](reports/evidence/project-2/20261106-131947/E-02-baseline-boot.log) boot · [E-03](reports/evidence/project-2/20261106-131947/E-03-baseline-api-http.log) `api.http` | [E-02](reports/evidence/project-3/20261106-140715/E-02-baseline-rotas.log) 22 rotas |
-| Testes após refatoração | [E-03](reports/evidence/project-1/20261105-175512/E-03-final-pytest.log) **35 passed** | [E-05](reports/evidence/project-2/20261106-131947/E-05-final-npm-test.log) **8 pass** | [E-03](reports/evidence/project-3/20261106-140715/E-03-final-pytest.log) **35 passed** |
-| Rotas / boot / requisições (após) | [E-04](reports/evidence/project-1/20261105-175512/E-04-final-v5-rotas.log) 18 rotas | [E-06](reports/evidence/project-2/20261106-131947/E-06-final-boot.log) boot · [E-07](reports/evidence/project-2/20261106-131947/E-07-final-api-http.log) `api.http` | [E-05](reports/evidence/project-3/20261106-140715/E-05-final-v5-rotas.log) 22 rotas |
-| Prova vermelha (testes de contrato no código original) | [E-05](reports/evidence/project-1/20261105-175512/E-05-vermelho-checkpoint.log) 11 failed / 1 guarda | não aplicável (contrato mantido) | [E-04](reports/evidence/project-3/20261106-140715/E-04-vermelho-checkpoint.log) 9 failed / 2 guardas |
-| Diff dos testes | [E-06](reports/evidence/project-1/20261105-175512/E-06-diff-testes.patch) | testes inalterados | [E-06](reports/evidence/project-3/20261106-140715/E-06-diff-testes.patch) |
-| Reauditoria | anexo do relatório | [E-08](reports/evidence/project-2/20261106-131947/E-08-reauditoria.log) | anexo do relatório |
+| Fase 1 (bloco `PHASE 1`) | [E-00](reports/evidence/project-1/20261116-195523/E-00-fase1-analise.txt) | [E-00](reports/evidence/project-2/20261116-213657/E-00-fase1-analise.txt) | [E-00](reports/evidence/project-3/20261116-214549/E-00-fase1-analise.txt) |
+| Testes no código original | [E-02](reports/evidence/project-1/20261116-195523/E-02-baseline-pytest.log) 23 passed | [E-02](reports/evidence/project-2/20261116-213657/E-02-baseline-npm-test.log) 8 pass | [E-01](reports/evidence/project-3/20261116-214549/E-01-baseline-pytest.log) 25 passed |
+| Execução local no original | [E-03](reports/evidence/project-1/20261116-195523/E-03-baseline-execucao-local.log) | [E-04](reports/evidence/project-2/20261116-213657/E-04-baseline-execucao-local.log) | [E-18](reports/evidence/project-3/20261116-214549/E-18-baseline-execucao-local.log) |
+| Testes após refatoração | [E-05](reports/evidence/project-1/20261116-195523/E-05-final-pytest.log) **51 passed** | [E-06](reports/evidence/project-2/20261116-213657/E-06-final-npm-test.log) **33 pass** | [E-19](reports/evidence/project-3/20261116-214549/E-19-final-pytest.log) **141 passed** |
+| Execução local autenticada após refatoração | [E-07](reports/evidence/project-1/20261116-195523/E-07-final-execucao-local.log) 52 requisições | [E-08](reports/evidence/project-2/20261116-213657/E-08-final-execucao-local.log) 21 requisições | [E-21](reports/evidence/project-3/20261116-214549/E-21-final-execucao-local.log) 171 requisições |
+| Prova vermelha no código original | [E-08](reports/evidence/project-1/20261116-195523/E-08-prova-vermelha-checkpoint.log) 28 falham | [E-09](reports/evidence/project-2/20261116-213657/E-09-sensibilidade-checkpoint.log) 14 falhas | [E-20](reports/evidence/project-3/20261116-214549/E-20-prova-vermelha-checkpoint.log) 103 falhas + 7 erros |
+| Diff dos testes | [E-10](reports/evidence/project-1/20261116-195523/E-10-diff-testes.patch) | [E-10](reports/evidence/project-2/20261116-213657/E-10-diff-testes.patch) | [E-25](reports/evidence/project-3/20261116-214549/E-25-diff-testes.patch) |
 
 Trechos dos logs:
 
 ```text
-# P1 — E-03-final-pytest.log
-tests/test_contratos.py::test_ct02_reset_db_exige_admin PASSED           [100%]
-============================= 35 passed in 6.04s ==============================
+# P1 — E-05-final-pytest.log
+tests\test_unidade.py .........                                          [100%]
+============================= 51 passed in 10.02s =============================
 
-# P2 — E-06-final-boot.log
-{"time":"2026-11-06T16:36:34.630Z","level":"info","msg":"LMS API rodando na porta 3000"}
-{"time":"2026-11-06T16:36:34.768Z","level":"info","msg":"checkout concluído","userId":2,"courseId":2,"enrollmentId":2}
+# P2 — E-08-final-execucao-local.log (credenciais aleatórias, mascaradas)
+01 | GET /api/admin/financial-report | cred=sem | status 401
+02 | GET /api/admin/financial-report | cred=inválida | status 401
+03 | GET /api/admin/financial-report | cred=admin | status 200
 
-# P2 — E-07-final-api-http.log (POST /api/checkout)
-HTTP/1.1 200 OK
-{"msg":"Sucesso","enrollment_id":2}
-
-# P3 — E-03-final-pytest.log
-tests/test_contratos.py::test_c06_validacoes_adicionais PASSED           [100%]
-============================= 35 passed in 8.43s ==============================
+# P3 — E-19-final-pytest.log
+141 passed
 ```
 
-Nos projetos Python, o boot real (`python app.py`) é feito pela fixture do pytest, que sobe a aplicação numa cópia temporária e aguarda `/health` antes dos testes. Cada execução também foi conferida de forma independente (reexecução dos testes, boot e `curl`, amostra de linhas do relatório contra o commit original): ver [validações](docs/evidencias-adicionais/validacoes/).
+### Validação independente
+
+Cada execução foi conferida por um agente sem contexto da execução, que reexecutou os testes, subiu a aplicação e comparou o relatório com o código original.
+
+| Projeto | Resultado | Documento |
+|---|---|---|
+| code-smells-project | Aprovado, com ressalvas não bloqueantes | [validacao-project-1](docs/evidencias-adicionais/validacoes/validacao-project-1_2026-11-16_v3.md) |
+| ecommerce-api-legacy | Aprovado, com ressalvas não bloqueantes | [validacao-project-2](docs/evidencias-adicionais/validacoes/validacao-project-2_2026-11-18_v3.md) |
+| task-manager-api | Aprovado na 3ª rodada, com ressalvas não bloqueantes; as rodadas 1 e 2 reprovaram por correção incompleta do F-029 e por token reaproveitado pelo mesmo id, ambos corrigidos | [validacao-project-3](docs/evidencias-adicionais/validacoes/validacao-project-3_2026-11-18_v3.md) |
 
 ### Mudanças de contrato (endpoints originais)
 
-A skill pergunta, na pausa da Fase 2, se as correções que alteram o contrato devem ser aplicadas. Usei as duas opções para demonstrar a escolha:
+Os 3 projetos usaram a opção **Refatorar**. Cada mudança tem justificativa na seção "Contratos — resultado" do relatório e prova nos testes e na execução local.
 
-- **P1 e P3 — Opção 2 (atualizar contrato, com prova):** os riscos eram CRITICAL (SQL arbitrário via HTTP, reset do banco sem autenticação, token falso, hash de senha exposto, qualquer visitante virando admin).
-  - **P1:** 14 de 19 rotas mudaram: `POST /admin/query` removida; rotas de dados e administrativas passam a exigir `Authorization: Bearer <token>` emitido por `POST /login`, com checagem de perfil e de propriedade; `senha`, `secret_key`, `db_path` e `debug` saem das respostas; CORS restrito a `CORS_ORIGINS`.
-  - **P3:** 20 de 22 rotas mudaram: login emite token assinado no lugar de `fake-jwt-token-<id>`; rotas de dados exigem token; alterar perfil e excluir usuários exige admin; `password` sai das respostas; CORS restrito; tipos inválidos passam de 500 para 400.
-  - Os testes originais continuam passando: no P1 só a fixture passou a autenticar (`test_api.py` inalterado); no P3, além da fixture, 1 teste (`test_login_sucesso`) foi adaptado ao novo token com asserções reforçadas (diff em E-06). 12 (P1) e 10 (P3) testes de contrato provam cada mudança, verdes no código novo e vermelhos no original. Justificativa por item (finding, CWE/OWASP, impacto para o cliente) na seção "Contratos — resultado" de [audit-project-1.md](reports/audit-project-1.md) e [audit-project-3.md](reports/audit-project-3.md).
-- **P2 — Opção 1 (manter contrato):** as 3 rotas mantêm status e formato (7 cenários iguais); os 8 testes passam sem alteração. Em troca, 2 CRITICAL ficam como residuais declarados (F-001 checkout sem verificar senha de conta existente; F-004 relatório e `DELETE` sem autenticação).
+- **P1 — 12 mudanças:** `POST /admin/query` removida; rotas administrativas, de escrita de produtos, de usuários e de pedidos exigem o token de `POST /login`, com checagem de perfil e de propriedade; `senha` e configuração interna saem das respostas; CORS restrito; três casos inválidos passam a responder 404/400.
+- **P2 — 4 mudanças:** relatório financeiro e exclusão de usuário exigem `ADMIN_API_KEY`; checkout de conta existente exige a senha correta; exclusão remove matrículas e pagamentos e responde 404 para id inexistente. Sem provedor configurado, o pagamento é recusado (P-20).
+- **P3 — 9 mudanças:** rotas de dados exigem token assinado e vinculado à conta (id reaproveitado ou troca de senha invalidam tokens antigos); `password` sai das respostas; `role`/`active` e exclusões só por admin; CORS restrito; validação de entrada; listagens limitadas a 100 itens; leitura, alteração e atribuição de tasks restritas ao responsável e à gestão (`admin`/`manager`).
 
 ### Itens residuais (reauditoria)
 
-A Fase 3 reaplica o catálogo ao código novo e só diria "zero anti-patterns" se não houvesse residuais:
+Nenhum CRITICAL/HIGH ficou sem correção. Permanecem:
 
-- **P1:** 0 CRITICAL, 0 HIGH; 7 MEDIUM/LOW parciais (rate limit no login, `pip-audit`, paginação, FKs e tipo monetário no banco existente, máquina de estados do pedido, README do projeto).
-- **P2:** 2 CRITICAL por contrato (Opção 1) e gateway de pagamento ainda simulado (isolado em `services/paymentGateway.js`); 3 MEDIUM parciais.
-- **P3:** 0 HIGH; F-001 parcial (segredos no histórico git) e MEDIUM/LOW parciais (rate limit, `pip-audit`, paginação, `NotificationService` sem uso, README do projeto).
+- **Ação manual nos 3 projetos:** rotacionar os segredos antigos que continuam no histórico git.
+- **P1:** F-018 (`pip-audit`/lock), F-021, F-022 e F-023 parciais (migração do banco existente, coluna monetária `REAL`, paginação), F-026 (README do projeto) e OUTRO-02 (limite de login em memória).
+- **P2:** F-018 (relatório sem paginação), F-019 (erros em texto) e F-025 (chaves do payload), mantidos para preservar o contrato. Integração com provedor de pagamento real fica pendente: sem ela, o checkout recusa todo pagamento fora do modo mock.
+- **P3:** F-013 (lock e versões), F-014 (senha mínima de 4 caracteres), F-016 (schema sem `ondelete`), F-018 (paginação parcial), F-023 (README do projeto), F-025 (formato de datas) e R-01, R-03 a R-07 (categorias editáveis por qualquer autenticado, possível enumeração de e-mail no login e no cadastro, e-mail com caixa diferente criando conta separada, 403 × 404 revelando ids existentes, id com milhares de dígitos respondendo 405).
+
+Pontos adicionais apontados pelas validações independentes, sem correção nesta entrega:
+
+- **P1:** `POST /produtos` com `Infinity`/`NaN` responde 500 em vez de 400 (rota restrita a admin; nada é gravado).
+- **P3:** token emitido antes de uma desativação volta a valer se a conta for reativada (dentro da validade de 1 h); falta teste automatizado para conta inativa.
+- **P2:** e-mail com caixa diferente cria conta separada; `CHECKOUT_RATE_LIMIT_MAX` não numérico desativa o limite; compras simultâneas com o mesmo e-mail novo exigem tratamento de estorno antes de integrar um provedor real.
+- **READMEs dos projetos e `api.http`:** continuam com as instruções originais; use a seção [Como Executar](#d-como-executar) deste documento. Nada carrega o arquivo `.env` automaticamente: as variáveis precisam estar exportadas no shell.
 
 ### Comportamento da skill em stacks diferentes
 
 | Projeto | Nível de organização detectado | Como a Fase 3 se adaptou |
 |---|---|---|
-| code-smells-project | `parcialmente-em-camadas` (4 arquivos com papéis misturados) | Criou services, views e middlewares inexistentes; substituiu `controllers.py`, `models.py` e `database.py` por pacotes |
-| ecommerce-api-legacy | `monolito-sem-camadas` (God Class) | Criou todas as camadas; manteve `src/app.js` como entry point (em vez de `server.js`) porque `npm start` e os testes o executam; callbacks → `async/await` |
-| task-manager-api | `parcialmente-em-camadas` (models/routes/services/utils) | Manteve as pastas existentes e moveu só o que estava fora do lugar; categorias ganharam módulo próprio; corrigiu as APIs deprecated |
+| code-smells-project | `monolito-sem-camadas` | Criou todas as camadas por domínio, com app factory e blueprints |
+| ecommerce-api-legacy | `monolito-sem-camadas` (God Class) | Criou todas as camadas e manteve `src/app.js` como entry point; callbacks viraram `async/await`; aplicou o P-20 |
+| task-manager-api | `parcialmente-em-camadas` | Manteve models e blueprints, moveu regra e dados para as camadas corretas e corrigiu as APIs deprecated |
 
-- Em Node, a skill usou as dicas do catálogo (SEC-08, SEC-14, ARC-05, ARC-07) e **derivou** um achado fora do catálogo: exceção em callback assíncrono derrubando o processo (F-008, DoS remoto).
-- Em Python, o mesmo catálogo detectou APIs deprecated só onde existiam (P3), registrando a busca negativa nos demais.
-- Quando o projeto tinha coleção de requisições (`api.http` no P2), a validação subiu um degrau: boot real + as mesmas requisições antes e depois.
+A execução foi feita por agentes do Claude Code seguindo o `SKILL.md`, com pausa real na Fase 2. As respostas às perguntas foram enviadas conforme as decisões registradas em [05-controle-entrega-v2.md](docs/evidencias-adicionais/05-controle-entrega-v2.md).
 
 ---
 
@@ -394,22 +430,22 @@ claude "/refactor-arch"
 ```
 
 ```bash
-cd ../ecommerce-api-legacy
+cd ecommerce-api-legacy
 claude "/refactor-arch"
 ```
 
 ```bash
-cd ../task-manager-api
+cd task-manager-api
 claude "/refactor-arch"
 ```
 
-Fluxo: a Fase 1 imprime `PHASE 1: PROJECT ANALYSIS`; a Fase 2 salva `reports/audit-project-{N}.md` na raiz do repositório e para em `Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]` com as perguntas P1–P4; a Fase 3 cria uma branch de checkpoint, refatora, valida e anexa os resultados ao relatório. A skill não faz commit.
+Fluxo: a Fase 1 imprime `PHASE 1: PROJECT ANALYSIS`; a Fase 2 salva `reports/audit-project-{N}.md` na raiz do repositório e para em `Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]` com as perguntas P1–P4; a Fase 3 cria o checkpoint, refatora, valida e anexa os resultados ao relatório. A skill não faz commit.
 
 ### Validar os projetos refatorados
 
-Os testes sobem a aplicação real e fazem requisições HTTP. `code-smells-project` e `task-manager-api` usam a porta 5000: rode um de cada vez.
+Os testes sobem a aplicação real e geram as próprias credenciais de teste. `code-smells-project` e `task-manager-api` usam a porta 5000: rode um de cada vez.
 
-**code-smells-project**
+**code-smells-project** (esperado: `51 passed`)
 
 ```bash
 cd code-smells-project
@@ -419,9 +455,7 @@ pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-Esperado: `35 passed`.
-
-**ecommerce-api-legacy**
+**ecommerce-api-legacy** (esperado: `33 pass, 0 fail`)
 
 ```bash
 cd ecommerce-api-legacy
@@ -429,9 +463,7 @@ npm install
 npm test
 ```
 
-Esperado: `8 pass, 0 fail`.
-
-**task-manager-api**
+**task-manager-api** (esperado: `141 passed`)
 
 ```bash
 cd task-manager-api
@@ -441,23 +473,21 @@ pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-Esperado: `35 passed`.
-
 ### Rodar as aplicações manualmente
 
-A configuração agora vem do ambiente. Cada projeto tem um `.env.example` com os nomes das variáveis (valores fictícios); exporte-as no shell antes de iniciar.
+Cada projeto tem um `.env.example` com os nomes das variáveis. **Exporte-as no shell antes de iniciar**, pois nada carrega o `.env` automaticamente.
 
 | Projeto | Variáveis principais | Comandos | URL |
 |---|---|---|---|
-| code-smells-project | `SECRET_KEY`, `SEED_ADMIN_PASSWORD`, `SEED_CLIENTE_PASSWORD`, `CORS_ORIGINS`, `ALLOW_DESTRUCTIVE` | `pip install -r requirements.txt` → `python app.py` | http://localhost:5000 |
-| ecommerce-api-legacy | `PORT`, `SEED_USER_PASSWORD`, `LOG_LEVEL`, `CHECKOUT_RATE_MAX` | `npm install` → `npm start` (exemplos em `api.http`) | http://localhost:3000 |
+| code-smells-project | `SECRET_KEY`, `SEED_ADMIN_PASSWORD`, `SEED_CLIENTE_PASSWORD`, `CORS_ORIGINS` | `pip install -r requirements.txt` → `python app.py` | http://localhost:5000 |
+| ecommerce-api-legacy | `ADMIN_API_KEY`, `SEED_USER_PASSWORD`, `APP_ENV`, `PAYMENT_PROVIDER`, `PAYMENT_MOCK_APPROVED_PREFIXES` | `npm install` → `npm start` | http://localhost:3000 |
 | task-manager-api | `SECRET_KEY`, `SEED_ADMIN_PASSWORD`, `SEED_MANAGER_PASSWORD`, `SEED_USER_PASSWORD`, `CORS_ORIGINS` | `pip install -r requirements.txt` → `python seed.py` → `python app.py` | http://localhost:5000 |
 
 Observações:
 
-- Sem `SECRET_KEY`, uma chave aleatória é gerada a cada boot (tokens deixam de valer ao reiniciar).
-- No `task-manager-api`, `python seed.py` exige as três variáveis `SEED_*` e apaga e recria os dados.
-- Nos projetos 1 e 3, as rotas de dados exigem `Authorization: Bearer <token>`: obtenha o token com `POST /login` usando o usuário admin do seed.
+- **Autenticação:** nos projetos 1 e 3, obtenha o token em `POST /login` e envie `Authorization: Bearer <token>`. No projeto 2, as rotas administrativas usam `Authorization: Bearer <ADMIN_API_KEY>`.
+- **Pagamento no projeto 2:** sem `PAYMENT_PROVIDER`, todo pagamento é recusado. Para desenvolvimento local, use `APP_ENV=development`, `PAYMENT_PROVIDER=mock` e `PAYMENT_MOCK_APPROVED_PREFIXES=4`. O mock é bloqueado em qualquer outro ambiente.
+- **Usuários de demonstração:** no projeto 1, sem as variáveis `SEED_*`, os usuários não são criados. No projeto 3, o `seed.py` apaga e recria os dados.
 
 ---
 
@@ -468,20 +498,17 @@ Observações:
 ├── README.md                          # este documento
 ├── docs/
 │   ├── DESAFIO.md                     # enunciado original do desafio
-│   └── evidencias-adicionais/         # timeline, análise manual, análise de testes,
-│       └── validacoes/                # decisões da skill, plano de ação e validações
+│   └── evidencias-adicionais/         # timeline, análises, plano, controle da v2
+│       └── validacoes/                # validações independentes da entrega v2
+├── historico/
+│   └── entrega-v1/                    # relatórios, evidências, validações e README da v1
 ├── code-smells-project/               # Projeto 1 — refatorado
-│   ├── .claude/skills/refactor-arch/  # SKILL.md + 7 referências
-│   └── tests/                         # caracterização + contratos
+│   └── .claude/skills/refactor-arch/  # SKILL.md + 7 referências
 ├── ecommerce-api-legacy/              # Projeto 2 — refatorado
-│   ├── .claude/skills/refactor-arch/  # cópia da skill
-│   └── test/
+│   └── .claude/skills/refactor-arch/  # cópia da skill
 ├── task-manager-api/                  # Projeto 3 — refatorado
-│   ├── .claude/skills/refactor-arch/  # cópia da skill
-│   └── tests/
+│   └── .claude/skills/refactor-arch/  # cópia da skill
 └── reports/
-    ├── audit-project-1.md             # saída da Fase 2 + anexo da Fase 3
-    ├── audit-project-2.md
-    ├── audit-project-3.md
+    ├── audit-project-{1,2,3}.md       # saída da Fase 2 + anexo da Fase 3
     └── evidence/project-{1,2,3}/      # evidências E-nn de cada execução
 ```

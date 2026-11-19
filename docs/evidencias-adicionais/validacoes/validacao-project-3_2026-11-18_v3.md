@@ -4,16 +4,25 @@
 - **Versão:** v3 — skill 1.2
 - **Desafio:** `docs/DESAFIO.md` (seções "Validação" e "Critérios de Aceite")
 - **Skill:** `task-manager-api/.claude/skills/refactor-arch/` (última alteração em `20f9e72`; idêntica à cópia de `code-smells-project`)
-- **Branch/commit:** `entrega-v2` @ `5ba4f4b` (segunda rodada); primeira rodada em `fcc9fc4`; original `5303107`. Sem diferença na working tree em `task-manager-api/`
+- **Branch/commit:** `entrega-v2` @ `adfb99d` (terceira rodada, 2026-11-19); segunda rodada em `5ba4f4b`; primeira em `fcc9fc4`; original `5303107`. Sem diferença na working tree em `task-manager-api/`
 - **Relatório validado:** `reports/audit-project-3.md` (Run id 20261116-214549)
-- **Evidências:** `reports/evidence/project-3/20261116-214549/` (E-00 a E-17, `tests-before/` e `tests-before-validacao/`)
+- **Evidências:** `reports/evidence/project-3/20261116-214549/` (E-00 a E-27, `tests-before/`, `tests-before-validacao/` e `tests-before-validacao-2/`)
 
 ## Veredito
 
-**Veredito final (segunda rodada, `5ba4f4b`): NÃO APROVADO na versão 1.2, por 1 ponto bloqueante novo. Os critérios de aceite do desafio continuam atendidos.**
+**Veredito final (terceira rodada, `adfb99d`): APROVADO na versão 1.2, com ressalvas não bloqueantes. Os critérios de aceite do desafio continuam atendidos.**
 
-- **Bloqueante da primeira rodada: resolvido.** Usuário comum e conta de cadastro público não leem nem deduzem tasks alheias pelas rotas de tasks, relatórios e categorias; admin e manager continuam vendo tudo.
-- **Bloqueante novo:** o token de uma conta excluída volta a valer quando o id dela é reutilizado por um novo cadastro. Com ele foi possível ler as tasks e o perfil da nova conta e **trocar a senha dela**. Reproduzi 3 vezes em 3 rodadas. Detalhes em "Segunda rodada de validação".
+- **Bloqueante da segunda rodada: resolvido.** O token de uma conta excluída responde 401 em todas as rotas, inclusive depois que outra conta herda o id. Troca de senha, desativação e rebaixamento de perfil também têm efeito imediato.
+- **Bloqueante da primeira rodada: continua resolvido.** Usuário comum não lê nem deduz tasks alheias.
+- **Ajustes pedidos:** confirmados (surrogate, `priority`, referências 0).
+- **Ressalvas:** detalhadas em "Terceira rodada de validação"; nenhuma impede a aprovação.
+
+### Registro da segunda rodada (`5ba4f4b`): reprovado
+
+**NÃO APROVADO na versão 1.2, por 1 ponto bloqueante novo. Os critérios de aceite do desafio continuavam atendidos.**
+
+- **Bloqueante da primeira rodada: resolvido.** Usuário comum e conta de cadastro público já não liam nem deduziam tasks alheias; admin e manager continuavam vendo tudo.
+- **Bloqueante novo:** o token de uma conta excluída voltava a valer quando o id dela era reutilizado por um novo cadastro. Com ele foi possível ler as tasks e o perfil da nova conta e **trocar a senha dela**. Reproduzi 3 vezes em 3 rodadas.
 - **Demais itens pedidos:** atribuição, valores inválidos, dependências, integridade das asserções e residuais R-01 a R-05 atendidos.
 
 ### Registro da primeira rodada (`fcc9fc4`): reprovado
@@ -208,3 +217,73 @@ Sobre o item 6: desde `fcc9fc4`, `test_api.py` e `conftest.py` não mudaram. `te
 6. **Não bloqueante — existência de task.** Task alheia responde 403 e inexistente, 404, o que revela quais ids existem, sem expor conteúdo.
 7. **Não bloqueante — escopo do CT-09.** O relatório aplicou a ampliação "dentro da C-17 / CT-09 já aprovada", mas ela muda o resultado de `GET /tasks`, `/tasks/search`, `/tasks/stats`, `/categories` e `POST /tasks`. Não há registro de nova aprovação do usuário para esse escopo maior.
 8. **Residuais declarados:** R-01 (categorias por qualquer autenticado) e R-04 (e-mail com outra caixa) continuam presentes, como o relatório informa. R-02, R-03 e R-05 foram conferidos só quanto à declaração nesta rodada.
+
+## Terceira rodada de validação
+
+Código validado: `adfb99d` (`fix(task-manager-api): vincula token à conta após 2ª validação independente`), em 2026-11-19. O token passou a carregar uma impressão (HMAC truncado) do hash de senha atual. A impressão é conferida a cada requisição, junto com a busca da conta ativa.
+
+### Método e números
+
+1. **Suíte completa:** **141 passed**, exit 0, igual ao E-19.
+2. **Bateria de identidade e token** em cópia temporária, porta 5000, com chave e senhas geradas por mim: **307 requisições, 64 verificações, 64 ok, 0 falhas, nenhum 5xx e nenhum traceback**. Cada cenário de invalidação testa as 19 rotas protegidas (as 18 do CT-01 mais HEAD) e `POST /users` com `role: admin`.
+3. **Regressão da segunda rodada**, com as expectativas novas: **618 requisições, 363 verificações, 363 ok, nenhum 5xx**. Inclui o teste diferencial de isolamento entre usuários e a reutilização de id.
+4. **Regressão da primeira rodada:** a bateria original inteira, com 6 subidas e os critérios de aceite do desafio: **162 requisições, 137 de 137 ok**.
+5. **Prova vermelha própria:** testes atuais contra o código de `5ba4f4b`: **15 failed, 126 passed**.
+6. **Mutação:** **11 de 12 mutantes mortos** (ponto de atenção 1). Os 2 mutantes de estatísticas que sobreviveram na segunda rodada agora são mortos.
+7. **Integridade dos testes:** comparação por AST contra `5303107`, `tests-before/` e `5ba4f4b`.
+8. Processos encerrados, porta 5000 livre, cópias temporárias removidas e `instance/tasks.db` do projeto intacto.
+
+### Resultado por item
+
+| Item | Verificação | Resultado |
+|---|---|---|
+| 1 | Suíte completa | **Atendido:** 141 passed |
+| 2 | Conta A excluída, conta B herda o id | **Atendido:** em 3 de 3 rodadas o token de A responde 401 em todas as rotas, já logo após a exclusão; a senha e o token de B ficam intactos |
+| 2 | Troca de senha | **Atendido:** pelo próprio, pelo admin e até para a mesma senha, todos os tokens anteriores respondem 401 nas 19 rotas; o novo login funciona |
+| 2 | Desativação | **Atendido:** 401 em todas as rotas; login responde 403 |
+| 2 | Rebaixamento de perfil | **Atendido:** efeito imediato em `/users`, `/reports/*`, dados de terceiros, listagem, atribuição e DELETE de admin |
+| 3 | Outros caminhos de identidade ou token | **Nenhum problema encontrado** (detalhes abaixo) |
+| 4 | Surrogate isolado | **Atendido:** 400 em 10 combinações de corpo em tasks, categorias, usuários e login, inclusive em chave e em tags; emoji válido aceito (201) |
+| 4 | `priority` | **Atendido:** `2.5`, `true`, `false`, `1.0`, `"2"`, `0` e `6` respondem 400 em POST e PUT; `3` responde 201 |
+| 4 | Referências 0 | **Atendido:** `user_id: 0` e `category_id: 0` respondem 404 (admin e comum); usuário comum atribuindo `user_id: 0` recebe 403 no POST e no PUT |
+| 5 | Regressão | **Atendido:** isolamento de tasks preservado; critérios de aceite atendidos; nenhuma asserção original enfraquecida |
+| 6 | Residuais | **Atendido:** R-01 e R-03 a R-07 declarados; o R-02 saiu da lista como corrigido, o que confirmei |
+
+**Outros caminhos testados (item 3), todos com resposta 401:**
+- Token assinado com a chave correta, mas sem `fp`, com `fp` vazio ou errado, com `user_id` booleano, texto, inexistente ou gigante, ou com payload em lista.
+- Token de outra chave e token com outro salt.
+- Conta recriada com o mesmo e-mail e a mesma senha (o salt muda o hash).
+
+**Comportamentos esperados conferidos:**
+- Alterar nome ou e-mail mantém o token.
+- O token do admin continua válido depois que ele troca a senha de outra conta.
+- Na migração de hash MD5 legado, o token emitido no login já vale, e um novo login não invalida o anterior.
+
+**Integridade dos testes:**
+- Desde `5ba4f4b`, `test_api.py` e `conftest.py` não mudaram, e `tests-before-validacao-2/` é idêntico a `5ba4f4b`.
+- `test_seguranca.py` foi de 107 para 129 asserções e `test_unidade.py` de 38 para 49, sem remoção.
+- O único teste antigo reescrito, `test_token_assinado_valida_adulteracao_e_expiracao`, manteve as 4 asserções (válido, adulterado, outra chave, expirado), adaptadas à nova assinatura `issue(user)` / `verify(token, carregar)`; não houve enfraquecimento.
+- Contra `5303107`, continua só a troca já registrada do formato `fake-jwt-token-<id>`.
+
+### Números atualizados
+
+| Métrica | Segunda rodada | Terceira rodada |
+|---|---|---|
+| Arquivos-fonte | 45 | 45 |
+| Linhas | 1550 | 1588 |
+| Maior arquivo | `validators/task_validator.py` (136) | `validators/task_validator.py` (136) |
+| Rotas | 22 | 22 |
+| Testes | 121 | 141 |
+
+### Pontos de atenção (nenhum bloqueante)
+
+1. **Lacuna de teste em contas desativadas.** O mutante que deixa uma conta inativa continuar autenticando pelo token sobrevive à suíte; a mesma lacuna já aparecia na primeira rodada. O comportamento está correto na execução real (401 em todas as rotas), mas nenhum teste automatizado o protege.
+2. **Reativação restaura tokens.** Um token emitido antes de desativar a conta volta a responder 200 depois que ela é reativada, se ainda estiver dentro da validade (1 h no padrão). Pode ser intencional, mas não está documentado.
+3. **Residuais declarados e confirmados:**
+   - R-01: usuário comum cria e renomeia categorias (201 e 200).
+   - R-03: e-mail inexistente respondeu em 17 ms e existente em 136 ms, numa amostra; o relatório diz "não medido".
+   - R-04: e-mail com outra caixa cria conta separada.
+   - R-06: task alheia responde 403 e inexistente, 404.
+   - R-07: URL com milhares de dígitos responde 405, sem 500.
+   - R-05 foi conferido só quanto à declaração.
+4. **Lacunas de teste da primeira rodada, não reavaliadas:** os mutantes de senha literal de fallback no seed e de paginação sem teto (M20 e M21) não foram rodados de novo.

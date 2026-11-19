@@ -69,25 +69,25 @@ Decisões do usuário para a v2:
 | 3.7 | P2 — commit | ✅ | ver registro |
 | 3.8 | P2 — validação independente (subagente) | ✅ | APROVADO com ressalvas não bloqueantes ([validação](validacoes/validacao-project-2_2026-11-18_v3.md)): os 4 itens do avaliador atendidos; 33/33 reexecutado; 113/113 verificações em execução real; 70/70 referências de linha; 14 de 15 mutantes detectados. Ressalvas: falta teste de "sem `ADMIN_API_KEY` nega tudo"; e-mail com caixa diferente cria conta separada; mudanças de resposta fora da tabela de contratos (`c_id` inválido, cartão curto, 429); limite de taxa não numérico vira `NaN`; README/`api.http` do projeto desatualizados |
 | 3.9 | P3 task-manager-api — Fases 1 e 2 (pausa) | ✅ | Run id 20261116-214549; 28 findings (7 C / 4 H / 11 M / 6 L); asterisco de Manter contrato*: "3 CRITICAL (F-002, F-006, F-007) e 0 HIGH ficarão sem correção"; execução interrompida por limite de uso da API e retomada em 2026-11-18 |
-| 3.10 | P3 — respostas e Fase 3 | 🔄 | respostas `1A 2A 3A 4A`; lote C aprovado; token assinado no `/login`. A reauditoria achou um HIGH novo (SEC-11, acesso a dados de terceiros): incluída a correção C-17 / CT-09 em vez de deixá-lo residual. Veredito VALIDADO (V1+V4); 0 CRITICAL/HIGH residuais; testes 25 → 85 (60 de prova: 12 unidade, 48 integração); execução local autenticada com 117 requisições (E-02 × E-05), 0 divergentes |
+| 3.10 | P3 — respostas e Fase 3 | ✅ | respostas `1A 2A 3A 4A`; lote C aprovado; token assinado no `/login`. A reauditoria achou um HIGH novo (SEC-11, acesso a dados de terceiros): incluída a correção C-17 / CT-09 em vez de deixá-lo residual. Veredito VALIDADO (V1+V4); 0 CRITICAL/HIGH residuais; testes 25 → 85 (60 de prova: 12 unidade, 48 integração); execução local autenticada com 117 requisições (E-02 × E-05), 0 divergentes |
 | 3.11 | P3 — commit | ✅ | ver registro |
-| 3.12 | P3 — validação independente (subagente) | ⚠️ | 1ª rodada: NÃO APROVADO — F-029 (HIGH) corrigido só em parte (leituras de tasks alheias por `/tasks/search`, `/tasks` e `/tasks/<id>`). Corrigido em `5ba4f4b`. 2ª rodada: NÃO APROVADO — token de conta excluída volta a valer para a conta nova que herda o id. Correção em andamento; 3ª rodada depois dela |
+| 3.12 | P3 — validação independente (subagente) | ✅ | 1ª rodada: NÃO APROVADO (F-029 incompleto: leituras de tasks alheias) → corrigido em `5ba4f4b`. 2ª rodada: NÃO APROVADO (token de conta excluída reaproveitado pelo mesmo id) → corrigido em `adfb99d`. 3ª rodada: APROVADO com ressalvas não bloqueantes; 141 passed ([validação](validacoes/validacao-project-3_2026-11-18_v3.md)) |
 
 ## Fase 4 — Documentação
 
 | # | Item | Status | Observação |
 |---|---|---|---|
-| 4.1 | README: seção "Revisão pós-avaliação (entrega v2)" e resultados atualizados | ⏳ | |
-| 4.2 | Timeline: passos 13+ | ⏳ | |
-| 4.3 | Verificação de links e números | ⏳ | |
-| 4.4 | Commit da documentação | ⏳ | |
+| 4.1 | README: seção "Revisão pós-avaliação (entrega v2)" e resultados atualizados | ✅ | seção A preservada; demais seções reescritas com os resultados da v2 |
+| 4.2 | Timeline: passos 13+ | ✅ | links das validações v1 apontam para `historico/` |
+| 4.3 | Verificação de links e números | ✅ | links relativos verificados; números conferidos com os relatórios |
+| 4.4 | Commit da documentação | ✅ | ver registro |
 
 ## Fase 5 — Envio
 
 | # | Item | Status | Observação |
 |---|---|---|---|
-| 5.1 | Push da branch `entrega-v2` e da tag `entrega-v1` (requer confirmação do usuário) | ⏳ | |
-| 5.2 | Abrir PR para `main` | ⏳ | |
+| 5.1 | Push da branch `entrega-v2` e da tag `entrega-v1` | ✅ | autorizado pelo usuário ("prossiga até finalizar todas as etapas sem perguntar") |
+| 5.2 | Abrir PR para `main` | ⚠️ | `gh` não instalado: PR pelo link de comparação do GitHub |
 
 ## Registro de execução
 
@@ -96,3 +96,7 @@ Decisões do usuário para a v2:
 | 2026-11-16 | Fase 0: branch `entrega-v2`, tag `entrega-v1`, arquivamento (`296406f`) |
 | 2026-11-16 | Fase 1: skill 1.2 editada, revisada por subagente independente, ajustada e copiada para os 3 projetos (`20f9e72`) |
 | 2026-11-16 | Fase 2: código original restaurado e suítes conferidas (`146f7d9`) |
+| 2026-11-16 | Fase 3, P1: execução e validação independente aprovada (`3e904d3`, `bb765d3`) |
+| 2026-11-18 | Fase 3, P2: execução e validação independente aprovada (`e8f4625`, `cf4d8f8`) |
+| 2026-11-19 | Fase 3, P3: execução (`fcc9fc4`), duas correções após reprovações da validação (`5ba4f4b`, `adfb99d`) e aprovação na 3ª rodada |
+| 2026-11-19 | Fase 4: README e timeline atualizados; Fase 5: push |
