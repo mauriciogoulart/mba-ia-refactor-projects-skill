@@ -36,19 +36,16 @@ A primeira entrega foi avaliada e recebeu esta solicitação de correção:
 | Ponto solicitado | O que foi feito | Evidência |
 |---|---|---|
 | Rotas de relatório financeiro e exclusão sem autenticação | Exigem `Authorization: Bearer <ADMIN_API_KEY>`; sem a variável definida, negam tudo | F-003 em [audit-project-2.md](reports/audit-project-2.md); [E-08](reports/evidence/project-2/20261116-213657/E-08-final-execucao-local.log) |
-| Checkout sem verificar a senha da conta existente | Senha verificada com scrypt; ausente ou incorreta responde 401 e nada é gravado | F-008; E-08 |
+| Checkout sem verificar a senha da conta existente | Senha verificada com scrypt; ausente ou incorreta responde 401 e nada é gravado | F-008; E-08. Classificado HIGH na v2 (era CRITICAL na v1, F-001), com justificativa no relatório; corrigido da mesma forma |
 | Gateway simulado aprovando cartão iniciado em "4" | Novo padrão **P-20**: recusa por padrão sem provedor configurado; mock só com `PAYMENT_PROVIDER=mock` e `APP_ENV` em `test`/`development` | F-002; [P-20](ecommerce-api-legacy/.claude/skills/refactor-arch/references/05-playbook-refatoracao.md); E-08 |
-| Opção de manter o contrato deixando CRITICAL/HIGH abertos | Regra nova na skill (detalhe abaixo) | [07-politica-comandos-aprovacoes.md](ecommerce-api-legacy/.claude/skills/refactor-arch/references/07-politica-comandos-aprovacoes.md), seção 4 |
-| Rodar a skill de novo no projeto | Executada a partir do código original, nos 3 projetos | [Validação do projeto 2](docs/evidencias-adicionais/validacoes/validacao-project-2_2026-11-18_v3.md) |
+| Opção de manter o contrato deixando CRITICAL/HIGH abertos | `Refatorar` passou a ser a primeira opção e a recomendada da pergunta de contrato; as 3 execuções usaram `Refatorar` e terminaram com 0 CRITICAL/HIGH abertos | [Critérios de aceite](#critérios-de-aceite-33-projetos); [07-politica-comandos-aprovacoes.md](ecommerce-api-legacy/.claude/skills/refactor-arch/references/07-politica-comandos-aprovacoes.md), seção 4 |
+| Rodar a skill de novo no projeto | Executada a partir do código original, nos 3 projetos | Run `20261116-213657`: [audit-project-2.md](reports/audit-project-2.md); [E-04](reports/evidence/project-2/20261116-213657/E-04-baseline-execucao-local.log) × [E-08](reports/evidence/project-2/20261116-213657/E-08-final-execucao-local.log) (rotas administrativas 200 → 401 sem credencial; senha errada 200 → 401; pagamento sem provedor 200 → 400); [validação do projeto 2](docs/evidencias-adicionais/validacoes/validacao-project-2_2026-11-18_v3.md) |
 
 **O que mudou na skill (1.1 → 1.2):**
 
-- **Pergunta de contrato com 3 opções:** `Refatorar` (primeira e recomendada), `Manter contrato*` e `Híbrido` (corrige CRITICAL/HIGH com a menor mudança de contrato e mantém o resto).
-- **Piso de segurança:** `Refatorar` e `Híbrido` não terminam com CRITICAL/HIGH aberto. `Manter contrato*` informa quantos ficarão sem correção, exige uma **segunda confirmação** com a lista dos findings, e o veredito recebe o sufixo `COM RESSALVAS DE SEGURANÇA`.
-- **P-20:** o pagamento simulado passa a ser corrigido em **todas** as opções, inclusive em `Manter contrato*`.
+- **Pergunta de contrato:** `Refatorar` (recomendado). As opções `Manter contrato*` e `Híbrido` existem para quando não for possível mudar o contrato e avisam quantos CRITICAL/HIGH ficariam abertos; não foram usadas nesta entrega.
+- **P-20:** o pagamento simulado passa a ser corrigido em **todas** as opções.
 - **Provas:** toda correção CRITICAL/HIGH ganha teste de unidade ou integração, e os endpoints são executados localmente com credenciais geradas pela própria aplicação (degrau V4), antes e depois da refatoração.
-
-> **Decisão de projeto declarada:** a opção `Manter contrato*` continua disponível. Ela só deixa CRITICAL/HIGH sem correção por escolha explícita, com aviso e segunda confirmação; autenticação em rota aberta não tem como ser corrigida sem mudar o contrato. As 3 execuções desta entrega usaram `Refatorar`, então esse caminho não foi exercitado de ponta a ponta: o aviso aparece nos relatórios, em "Resumo para a pergunta".
 
 **Onde está a entrega anterior:** [historico/entrega-v1/](historico/entrega-v1/LEIA-ME.md) guarda relatórios, evidências, validações e README da v1. A tag git `entrega-v1` aponta para o repositório como foi entregue. O passo a passo desta revisão está em [05-controle-entrega-v2.md](docs/evidencias-adicionais/05-controle-entrega-v2.md).
 
@@ -195,7 +192,7 @@ Outras decisões:
 |---|---|
 | Os projetos não tinham testes; sem baseline não há como provar que "continua funcionando" | Antes da skill, criei suítes de caracterização caixa-preta via HTTP (23 / 8 / 25 testes) ([relatório](docs/evidencias-adicionais/02-relatorio-analise-execucao-testes.md)) |
 | Pouca familiaridade com Python e Node | Análise manual com apoio de IA e skill construída para atuar como "dev novo no projeto" |
-| Corrigir CRITICAL de segurança muda o contrato da API, mas o desafio pede que os endpoints continuem respondendo | Pergunta P3 explícita; os testes originais continuam válidos com credencial de teste e testes novos provam cada mudança: **verdes** no código novo e **vermelhos** no original |
+| Corrigir CRITICAL de segurança muda o contrato da API, mas o desafio pede que os endpoints continuem respondendo | Pergunta P3 explícita, criada por essa ambiguidade do enunciado; os testes originais continuam válidos com credencial de teste e testes novos provam cada mudança: **verdes** no código novo e **vermelhos** no original |
 | v1.0: Fase 1 sem registro, regra "nunca edite testes" em conflito com contrato aprovado, senhas de seed no fonte ([pontos de atenção](historico/entrega-v1/validacoes/validacao-project-1_2026-11-05_v1.md)) | v1.1: evidência `E-00`, política de alteração de testes, prova vermelho/verde e senhas por `SEED_*` |
 | v1.1: a opção de manter o contrato deixou CRITICAL abertos e o P-09 apenas isolava o pagamento simulado (avaliação da entrega) | v1.2: 3 opções na P3, segunda confirmação, P-20, testes de prova em qualquer opção e execução local autenticada |
 | Revisão independente da v1.2 apontou fail-open no P-20 e contradições de política antes da execução | Mock só por lista branca de ambiente, nunca como padrão; exceção explícita para o diretório temporário; status `ALTERADO (correção F-xxx, sem contrato)` |
@@ -396,7 +393,7 @@ Pontos adicionais apontados pelas validações independentes, sem correção nes
 
 - **P1:** `POST /produtos` com `Infinity`/`NaN` responde 500 em vez de 400 (rota restrita a admin; nada é gravado).
 - **P3:** token emitido antes de uma desativação volta a valer se a conta for reativada (dentro da validade de 1 h); falta teste automatizado para conta inativa.
-- **P2:** e-mail com caixa diferente cria conta separada; `CHECKOUT_RATE_LIMIT_MAX` não numérico desativa o limite; compras simultâneas com o mesmo e-mail novo exigem tratamento de estorno antes de integrar um provedor real.
+- **P2:** e-mail com caixa diferente cria conta separada; `CHECKOUT_RATE_LIMIT_MAX` não numérico desativa o limite; compras simultâneas com o mesmo e-mail novo exigem tratamento de estorno antes de integrar um provedor real. A ressalva de não haver teste para "sem `ADMIN_API_KEY`, as rotas administrativas negam tudo" foi verificada por fora, sem alterar o código: 10/10 casos OK, com 401 sem a chave e 200 só com a chave correta ([evidência complementar](docs/evidencias-adicionais/validacoes/evidencia-project-2-admin-sem-chave_2026-11-20.md)).
 - **READMEs dos projetos e `api.http`:** continuam com as instruções originais; use a seção [Como Executar](#d-como-executar) deste documento. Nada carrega o arquivo `.env` automaticamente: as variáveis precisam estar exportadas no shell.
 
 ### Comportamento da skill em stacks diferentes
