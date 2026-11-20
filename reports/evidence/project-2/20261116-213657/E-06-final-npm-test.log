@@ -1,0 +1,68 @@
+### E-06 · V1 testes do projeto — npm test (após refatoração)
+Comando:      npm test
+Diretório:    ecommerce-api-legacy
+Origem:       K-02 · package.json:8 · Classe B · Autorização: automática (classe B)
+Início/Fim:   2026-11-18T19:30:06-03:00 → 2026-11-18T19:30:07-03:00 (duração 1 s)        Exit code: 0
+Ambiente:     Node v24.11.1, npm 11.6.4, express 4.22.1, sqlite3 5.1.7, Windows 11
+Resultado:    ver contagens ao final da saída (baseline E-02: passed 8 | failed 0 | skipped 0)
+Integridade:  testes alterados: 1 arquivo (test/api.test.js); adicionados: 25 (T4) — ver E-10 e o anexo do relatório
+Saída capturada (segredos mascarados):
+
+> desafio-arquitetura-ia-boilerplate@1.0.0 test
+> node --test
+
+▶ LMS API
+  ✔ relatório financeiro inicial reflete os seeds (20.6368ms)
+  ✔ checkout sem campos obrigatórios retorna 400 (20.4675ms)
+  ✔ checkout de curso inexistente retorna 404 (2.7935ms)
+  ✔ checkout com cartão recusado retorna 400 (2.9267ms)
+  ✔ checkout com sucesso cria usuário e matrícula (39.7291ms)
+  ✔ relatório financeiro reflete o checkout aprovado (2.0682ms)
+  ✔ checkout de usuário já existente reutiliza o cadastro (38.5261ms)
+  ✔ DELETE /api/users/:id retorna 200 (2.493ms)
+  ✔ CT-01: relatório financeiro exige credencial de administrador (2.4486ms)
+  ✔ CT-02: DELETE de usuário exige credencial e não remove sem ela (2.4823ms)
+  ✔ CT-04: DELETE remove matrículas e pagamentos e responde 404 para id inexistente (2.2729ms)
+  ✔ CT-03: checkout de e-mail cadastrado exige a senha da conta (105.5572ms)
+  ✔ F-001: logs não contêm número de cartão nem chave do gateway (0.2145ms)
+  ✔ F-007: cartão não textual retorna 400 e não derruba o processo (3.5566ms)
+✔ LMS API (641.6129ms)
+▶ checkoutService
+  ✔ F-011: conclui a compra e grava usuário, matrícula, pagamento e auditoria (91.32ms)
+  ✔ F-009: pagamento recusado não grava nada, nem o usuário novo (41.2764ms)
+  ✔ F-009: falha no meio do fluxo desfaz todas as escritas (75.7674ms)
+  ✔ F-008: e-mail cadastrado com senha errada é negado antes de cobrar (71.6354ms)
+  ✔ F-008: e-mail cadastrado com a senha correta conclui a compra (71.3684ms)
+  ✔ F-005: compra sem senha não cria conta com senha padrão (111.5207ms)
+✔ checkoutService (464.5534ms)
+▶ composition root
+  ✔ duas aplicações no mesmo processo não compartilham estado (235.7781ms)
+✔ composition root (243.5768ms)
+▶ hash de senha
+  ✔ usa scrypt com salt aleatório e não expõe a senha (53.8155ms)
+  ✔ aceita somente a senha exata (141.7148ms)
+✔ hash de senha (197.6972ms)
+▶ gateway de pagamento
+  ✔ sem provedor configurado, qualquer cartão é recusado (0.8725ms)
+  ✔ provedor desconhecido é recusado (0.1908ms)
+  ✔ mock é bloqueado fora da lista branca de ambientes (0.3373ms)
+  ✔ mock aprova só os prefixos configurados; lista vazia não aprova nada (0.3606ms)
+✔ gateway de pagamento (2.8613ms)
+▶ reportService
+  ✔ agrega receita paga por curso e preserva o formato da resposta (2.5155ms)
+  ✔ soma centavos sem erro de ponto flutuante (0.3992ms)
+  ✔ propaga falha do banco como rejeição (0.7585ms)
+✔ reportService (4.7065ms)
+▶ configuração
+  ✔ código-fonte não contém segredos literais (7.2417ms)
+  ✔ sem ambiente não há credencial nem provedor padrão (1.1176ms)
+  ✔ segredos são lidos do ambiente (0.1643ms)
+✔ configuração (9.8301ms)
+ℹ tests 33
+ℹ suites 7
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 781.7978

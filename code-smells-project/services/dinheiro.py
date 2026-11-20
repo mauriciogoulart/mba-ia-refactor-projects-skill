@@ -1,6 +1,7 @@
+"""Cálculo monetário em Decimal (armazenamento continua REAL; conversão na borda)."""
 from decimal import ROUND_HALF_UP, Decimal
 
-CENTAVOS = Decimal("0.01")
+from services.regras import CENTAVOS
 
 
 def para_decimal(valor):
@@ -8,5 +9,4 @@ def para_decimal(valor):
 
 
 def arredondar(valor):
-    """Arredonda para 2 casas e devolve float, mantendo o formato numérico das respostas."""
-    return float(Decimal(valor).quantize(CENTAVOS, rounding=ROUND_HALF_UP))
+    return float(para_decimal(valor).quantize(CENTAVOS, rounding=ROUND_HALF_UP))

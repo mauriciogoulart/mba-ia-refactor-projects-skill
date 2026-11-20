@@ -1,47 +1,66 @@
 const sqlite3 = require('sqlite3');
 
-// Envolve a conexão sqlite3 em métodos baseados em Promise.
-function createConnection(filename) {
-    const db = new sqlite3.Database(filename);
-    let filaTransacoes = Promise.resolve();
-
-    const run = (sql, params = []) => new Promise((resolve, reject) => {
-        db.run(sql, params, function onRun(err) {
+// Abre a conexão SQLite e expõe uma interface baseada em Promises (P-12).
+function openDatabase(filename) {
+    return new Promise((resolve, reject) => {
+        const raw = new sqlite3.Database(filename, (err) => {
             if (err) return reject(err);
-            resolve({ lastID: this.lastID, changes: this.changes });
+            resolve(wrap(raw));
         });
     });
+}
 
-    const get = (sql, params = []) => new Promise((resolve, reject) => {
-        db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
-    });
+function wrap(raw) {
+    const db = {
+        run(sql, params = []) {
+            return new Promise((resolve, reject) => {
+                raw.run(sql, params, function onRun(err) {
+                    if (err) return reject(err);
+                    resolve({ lastID: this.lastID, changes: this.changes });
+                });
+            });
+        },
+        get(sql, params = []) {
+            return new Promise((resolve, reject) => {
+                raw.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
+            });
+        },
+        all(sql, params = []) {
+            return new Promise((resolve, reject) => {
+                raw.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
+            });
+        },
+        exec(sql) {
+            return new Promise((resolve, reject) => {
+                raw.exec(sql, (err) => (err ? reject(err) : resolve()));
+            });
+        },
+        close() {
+            return new Promise((resolve, reject) => {
+                raw.close((err) => (err ? reject(err) : resolve()));
+            });
+        },
+    };
 
-    const all = (sql, params = []) => new Promise((resolve, reject) => {
-        db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
-    });
-
-    const exec = (sql) => new Promise((resolve, reject) => {
-        db.exec(sql, (err) => (err ? reject(err) : resolve()));
-    });
-
-    // A conexão é única: transações são enfileiradas para não se intercalarem.
-    const transaction = (fn) => {
-        const execucao = filaTransacoes.then(async () => {
-            await run('BEGIN');
+    // Transações serializadas: uma por vez sobre a conexão única, com ROLLBACK em qualquer falha (P-10).
+    let queue = Promise.resolve();
+    db.transaction = (work) => {
+        const result = queue.then(async () => {
+            await db.exec('BEGIN IMMEDIATE');
             try {
-                const resultado = await fn();
-                await run('COMMIT');
-                return resultado;
+                const value = await work(db);
+                await db.exec('COMMIT');
+                return value;
             } catch (err) {
-                await run('ROLLBACK').catch(() => {});
+                await db.exec('ROLLBACK');
                 throw err;
             }
         });
-        filaTransacoes = execucao.catch(() => {});
-        return execucao;
+        queue = result.catch(() => {});
+        return result;
     };
 
-    return { run, get, all, exec, transaction };
+    return db;
 }
 
-module.exports = { createConnection };
+module.exports = { openDatabase };

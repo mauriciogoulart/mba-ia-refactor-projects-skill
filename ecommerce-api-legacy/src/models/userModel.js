@@ -1,18 +1,15 @@
 function createUserModel(db) {
     return {
-        async findIdByEmail(email) {
-            const row = await db.get('SELECT id FROM users WHERE email = ?', [email]);
-            return row ? row.id : null;
+        findByEmail(email) {
+            return db.get('SELECT id, name, email, pass FROM users WHERE email = ?', [email]);
         },
-
-        async create({ name, email, passwordHash }) {
-            const { lastID } = await db.run('INSERT INTO users (name, email, pass) VALUES (?, ?, ?)',
-                [name, email, passwordHash]);
+        async create({ name, email, passHash }) {
+            const { lastID } = await db.run('INSERT INTO users (name, email, pass) VALUES (?, ?, ?)', [name, email, passHash]);
             return lastID;
         },
-
-        deleteById(id) {
-            return db.run('DELETE FROM users WHERE id = ?', [id]);
+        async deleteById(id) {
+            const { changes } = await db.run('DELETE FROM users WHERE id = ?', [id]);
+            return changes;
         },
     };
 }

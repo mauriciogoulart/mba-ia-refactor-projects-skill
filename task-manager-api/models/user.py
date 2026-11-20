@@ -4,12 +4,11 @@ import re
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from database import db
-from utils.constants import ROLE_ADMIN, ROLE_USER
-from utils.helpers import utc_now
+from database import db, get_by_id
+from models.constants import ROLE_ADMIN, ROLE_USER, STAFF_ROLES
+from utils.clock import utcnow
 
-# Hash MD5 legado (hex de 32 caracteres) gravado pela versão anterior; migrado no próximo login.
-_LEGACY_MD5 = re.compile(r'^[0-9a-f]{32}$')
+FORMATO_MD5_LEGADO = re.compile(r'[0-9a-f]{32}')
 
 
 class User(db.Model):
@@ -21,36 +20,46 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(50), default=ROLE_USER)
     active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=utc_now)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
-    def set_password(self, raw_password):
-        self.password = generate_password_hash(raw_password)
+    def set_password(self, pwd):
+        self.password = generate_password_hash(pwd)
 
-    def password_needs_rehash(self):
-        return bool(self.password and _LEGACY_MD5.match(self.password))
-
-    def check_password(self, raw_password):
-        if self.password_needs_rehash():
-            legacy = hashlib.md5(raw_password.encode()).hexdigest()
-            return hmac.compare_digest(self.password, legacy)
-        return check_password_hash(self.password, raw_password)
+    def check_password(self, pwd):
+        """Confere a senha; hash MD5 legado é substituído pelo KDF na primeira conferência válida."""
+        if FORMATO_MD5_LEGADO.fullmatch(self.password):
+            legado = hashlib.md5(pwd.encode(), usedforsecurity=False).hexdigest()
+            if not hmac.compare_digest(legado, self.password):
+                return False
+            self.set_password(pwd)
+            return True
+        return check_password_hash(self.password, pwd)
 
     def is_admin(self):
         return self.role == ROLE_ADMIN
 
-    # ---------- acesso a dados ----------
+    def is_staff(self):
+        return self.role in STAFF_ROLES
+
+    def task_scope(self):
+        """Responsável pelas tasks visíveis ao usuário; None significa todas."""
+        return None if self.is_staff() else self.id
 
     @classmethod
-    def get(cls, user_id):
-        return db.session.get(cls, user_id)
+    def find(cls, user_id):
+        return get_by_id(cls, user_id)
+
+    @classmethod
+    def find_by_email(cls, email):
+        return cls.query.filter_by(email=email).first()
 
     @classmethod
     def list_all(cls):
         return cls.query.order_by(cls.id).all()
 
     @classmethod
-    def find_by_email(cls, email):
-        return cls.query.filter_by(email=email).first()
+    def list_page(cls, limit, offset):
+        return cls.query.order_by(cls.id).limit(limit).offset(offset).all()
 
     @classmethod
     def count_all(cls):

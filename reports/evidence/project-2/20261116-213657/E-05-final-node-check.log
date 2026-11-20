@@ -1,0 +1,43 @@
+### E-05 · V5 estático — node --check (após refatoração)
+Comando:      node --check <cada .js de src/ e test/>
+Diretório:    ecommerce-api-legacy
+Origem:       K-01 · toolchain · Classe B · Autorização: automática (classe B)
+Início/Fim:   2026-11-18T19:30:04-03:00 → 2026-11-18T19:30:06-03:00 (duração 2 s)        Exit code: 0
+Ambiente:     Node v24.11.1, npm 11.6.4, express 4.22.1, sqlite3 5.1.7, Windows 11
+Resultado:    35 arquivos verificados; 0 falhas (baseline E-01: 3/3 ok)
+Saída capturada (segredos mascarados):
+﻿node --check src\app.js exit=0
+node --check src\config\constants.js exit=0
+node --check src\config\settings.js exit=0
+node --check src\controllers\checkoutController.js exit=0
+node --check src\controllers\reportController.js exit=0
+node --check src\controllers\userController.js exit=0
+node --check src\database\connection.js exit=0
+node --check src\database\schema.js exit=0
+node --check src\errors\AppError.js exit=0
+node --check src\middlewares\errorHandler.js exit=0
+node --check src\middlewares\rateLimiter.js exit=0
+node --check src\middlewares\requireAdmin.js exit=0
+node --check src\middlewares\securityHeaders.js exit=0
+node --check src\models\auditLogModel.js exit=0
+node --check src\models\courseModel.js exit=0
+node --check src\models\enrollmentModel.js exit=0
+node --check src\models\paymentModel.js exit=0
+node --check src\models\reportModel.js exit=0
+node --check src\models\userModel.js exit=0
+node --check src\routes\index.js exit=0
+node --check src\services\checkoutService.js exit=0
+node --check src\services\passwordService.js exit=0
+node --check src\services\reportService.js exit=0
+node --check src\services\userService.js exit=0
+node --check src\services\payment\gatewayFactory.js exit=0
+node --check src\utils\asyncHandler.js exit=0
+node --check src\utils\logger.js exit=0
+node --check src\validators\checkoutValidator.js exit=0
+node --check test\api.test.js exit=0
+node --check test\checkout-service.test.js exit=0
+node --check test\composition-root.test.js exit=0
+node --check test\password-service.test.js exit=0
+node --check test\payment-gateway.test.js exit=0
+node --check test\report-service.test.js exit=0
+node --check test\settings.test.js exit=0

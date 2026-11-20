@@ -1,0 +1,23 @@
+### E-03 · V3 boot (npm start) + checkouts de api.http (baseline)
+Comando:      node <tmp>/v3-colecao.js <projeto>   (spawn `npm start`; POST /api/checkout com os 2 corpos de api.http:3-25; taskkill do processo)     Diretório: ecommerce-api-legacy
+Origem:       K-03 · README.md:9; package.json:7; api.http:3-25 · Classe B · Autorização: automática (classe B)
+Início/Fim:   2026-11-16T21:44:41-03:00 → 2026-11-16T21:44:43-03:00 (duração ~2 s)        Exit code: 0
+Ambiente:     Node v24.11.1; banco SQLite em memória; porta 3000
+Resultado:    boot ok; 2/2 requisições responderam (200, 400); porta liberada
+Observação:   a aplicação original imprime o cartão completo e a chave do gateway (F-001); o script mascarou na captura.
+Saída:
+boot: ok em 1025ms
+log de boot:
+  > desafio-arquitetura-ia-boilerplate@1.0.0 start
+  > node src/app.js
+  Frankenstein LMS rodando na porta 3000...
+POST /api/checkout | Checkout - sucesso (api.http:3-13) | status 200 | {msg,enrollment_id} | 94ms
+POST /api/checkout | Checkout - pagamento recusado (api.http:15-25) | status 400 | texto "Pagamento recusado" | 8ms
+porta 3000 liberada: true
+log completo da aplicação (mascarado):
+  > desafio-arquitetura-ia-boilerplate@1.0.0 start
+  > node src/app.js
+  Frankenstein LMS rodando na porta 3000...
+  Processando cartão 4111********4444 na chave pk_l***
+  [LOG] Salvando no cache: last_checkout_2
+  Processando cartão 5111********4444 na chave pk_l***

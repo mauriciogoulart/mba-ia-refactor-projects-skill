@@ -1,0 +1,30 @@
+### E-02 · V1 testes do projeto — npm test (baseline)
+Comando:      npm test                         Diretório: ecommerce-api-legacy
+Origem:       K-02 · package.json:8 · Classe B · Autorização: automática (classe B)
+Início/Fim:   2026-11-16T21:44:19-03:00 → 2026-11-16T21:44:21-03:00 (duração ~2 s)        Exit code: 0
+Ambiente:     Node v24.11.1, npm 11.6.4, express 4.22.1, sqlite3 5.1.7
+Resultado:    passed 8 | failed 0 | skipped 0
+Saída completa:
+
+> desafio-arquitetura-ia-boilerplate@1.0.0 test
+> node --test
+
+▶ LMS API
+  ✔ relatório financeiro inicial reflete os seeds (20.7689ms)
+  ✔ checkout sem campos obrigatórios retorna 400 (29.9623ms)
+  ✔ checkout de curso inexistente retorna 404 (3.6916ms)
+  ✔ checkout com cartão recusado retorna 400 (14.0421ms)
+  ✔ checkout com sucesso cria usuário e matrícula (9.2705ms)
+  ✔ relatório financeiro reflete o checkout aprovado (2.8517ms)
+  ✔ checkout de usuário já existente reutiliza o cadastro (6.5174ms)
+  ✔ DELETE /api/users/:id retorna 200 (2.6024ms)
+✔ LMS API (812.5993ms)
+ℹ tests 8
+ℹ suites 1
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 949.5912
+Integridade:  testes alterados/adicionados: 0 (baseline)

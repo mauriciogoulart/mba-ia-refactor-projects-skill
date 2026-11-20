@@ -1,0 +1,9 @@
+Comando:    D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe -m pytest -q --tb=short
+Diretório:  D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api
+Origem:     K-01 · pytest.ini · Classe B · automática
+Início/Fim: 2026-11-19T08:20:07-03:00 → 2026-11-19T08:20:29-03:00 (duração 21.3s)
+Exit code:  0
+------------------------------------------------------------
+........................................................................ [ 51%]
+.....................................................................    [100%]
+141 passed in 20.44s

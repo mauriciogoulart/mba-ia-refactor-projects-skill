@@ -1,5 +1,8 @@
-"""Serialização de saída (DTOs). Campos sensíveis (senha/hash) nunca são expostos."""
-from utils.helpers import format_date
+"""Serialização de saída: somente os campos públicos de cada entidade."""
+
+
+def _optional_date(value):
+    return str(value) if value else None
 
 
 def task_to_dict(task):
@@ -13,25 +16,24 @@ def task_to_dict(task):
         'category_id': task.category_id,
         'created_at': str(task.created_at),
         'updated_at': str(task.updated_at),
-        'due_date': format_date(task.due_date),
-        'tags': task.tag_list,
+        'due_date': _optional_date(task.due_date),
+        'tags': task.tags.split(',') if task.tags else [],
     }
 
 
-def task_with_overdue(task, now):
-    data = task_to_dict(task)
-    data['overdue'] = task.is_overdue(now)
-    return data
+def task_detail(task):
+    return {**task_to_dict(task), 'overdue': task.is_overdue()}
 
 
-def task_list_item(task, now):
-    data = task_with_overdue(task, now)
-    data['user_name'] = task.user.name if task.user else None
-    data['category_name'] = task.category.name if task.category else None
-    return data
+def task_list_item(task):
+    return {
+        **task_detail(task),
+        'user_name': task.user.name if task.user else None,
+        'category_name': task.category.name if task.category else None,
+    }
 
 
-def user_task_item(task, now):
+def user_task_item(task):
     return {
         'id': task.id,
         'title': task.title,
@@ -39,8 +41,8 @@ def user_task_item(task, now):
         'status': task.status,
         'priority': task.priority,
         'created_at': str(task.created_at),
-        'due_date': format_date(task.due_date),
-        'overdue': task.is_overdue(now),
+        'due_date': _optional_date(task.due_date),
+        'overdue': task.is_overdue(),
     }
 
 
@@ -55,20 +57,11 @@ def user_to_public(user):
     }
 
 
-def user_list_item(user, task_count):
-    data = user_to_public(user)
-    data['task_count'] = task_count
-    return data
-
-
-def category_to_dict(category, task_count=None):
-    data = {
+def category_to_dict(category):
+    return {
         'id': category.id,
         'name': category.name,
         'description': category.description,
         'color': category.color,
         'created_at': str(category.created_at),
     }
-    if task_count is not None:
-        data['task_count'] = task_count
-    return data

@@ -1,46 +1,51 @@
+"""Handlers de produtos."""
 import logging
 
-from flask import request
+from flask import current_app, jsonify, request
 
-from controllers import servicos
-from controllers.validacao import validar_filtros_busca, validar_produto
-from views.respostas import resposta
+from controllers.validators import validar_busca, validar_paginacao, validar_produto
 from views.serializers import produto_publico
 
-logger = logging.getLogger("app.produtos")
+logger = logging.getLogger(__name__)
 
 
-def listar():
-    produtos = servicos().produtos.listar()
-    return resposta([produto_publico(p) for p in produtos])
+def _servico():
+    return current_app.extensions["loja"].produto_service
 
 
-def buscar():
-    filtros = validar_filtros_busca(request.args)
-    resultados = servicos().produtos.buscar(**filtros)
-    return resposta([produto_publico(p) for p in resultados], total=len(resultados))
+def listar_produtos():
+    limite, offset = validar_paginacao(request.args)
+    produtos = _servico().listar(limite, offset)
+    logger.info("Listando %d produtos", len(produtos))
+    return jsonify({"dados": [produto_publico(p) for p in produtos], "sucesso": True}), 200
 
 
-def obter(produto_id):
-    return resposta(produto_publico(servicos().produtos.obter(produto_id)))
+def buscar_produto(produto_id):
+    return jsonify({"dados": produto_publico(_servico().obter(produto_id)), "sucesso": True}), 200
 
 
-def criar():
+def buscar_produtos():
+    filtros = validar_busca(request.args)
+    resultados = _servico().buscar(**filtros)
+    return jsonify({"dados": [produto_publico(p) for p in resultados], "total": len(resultados),
+                    "sucesso": True}), 200
+
+
+def criar_produto():
     dados = validar_produto(request.get_json(silent=True))
-    produto_id = servicos().produtos.criar(dados)
-    logger.info("Produto criado: id=%s", produto_id)
-    return resposta({"id": produto_id}, status=201, mensagem="Produto criado")
+    produto_id = _servico().criar(dados)
+    logger.info("Produto criado com ID %s", produto_id)
+    return jsonify({"dados": {"id": produto_id}, "sucesso": True, "mensagem": "Produto criado"}), 201
 
 
-def atualizar(produto_id):
-    # Existência antes da validação, como no contrato original (404 tem precedência sobre 400).
-    servicos().produtos.obter(produto_id)
-    dados = validar_produto(request.get_json(silent=True))
-    servicos().produtos.atualizar(produto_id, dados)
-    return resposta(mensagem="Produto atualizado")
+def atualizar_produto(produto_id):
+    servico = _servico()
+    servico.obter(produto_id)  # 404 antes da validação, como no comportamento original
+    servico.atualizar(produto_id, validar_produto(request.get_json(silent=True)))
+    return jsonify({"sucesso": True, "mensagem": "Produto atualizado"}), 200
 
 
-def remover(produto_id):
-    servicos().produtos.remover(produto_id)
-    logger.info("Produto removido: id=%s", produto_id)
-    return resposta(mensagem="Produto deletado")
+def deletar_produto(produto_id):
+    _servico().excluir(produto_id)
+    logger.info("Produto %s deletado", produto_id)
+    return jsonify({"sucesso": True, "mensagem": "Produto deletado"}), 200

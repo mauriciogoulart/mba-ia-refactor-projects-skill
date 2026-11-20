@@ -1,0 +1,12 @@
+Início: 2026-11-18T19:31:05-03:00
+node_modules do projeto antes: 179 pastas
+junção: LinkType=Junction
+junção removida (rmdir, sem tocar no destino): exit=0
+node_modules do projeto depois: 179 pastas
+git worktree remove --force: exit=0
+worktrees restantes: D:/work/workspace-ia-python/mba-ia-refactor-projects-skill                                                                    bb765d3 [entrega-v2] | C:/Users/maury/AppData/Local/Temp/claude/5e8788bb76161e32/b6ba369c-f235-496e-bc99-b1782d5fead4/scratchpad/exec-p3/checkpoint  bb765d3 (detached HEAD)
+branch de checkpoint mantida: bb765d3 refactor-arch/checkpoint-20261116-213657
+diretório temporário da execução removido: True
+porta 3000: livre
+processos node ativos: 0
+Fim: 2026-11-18T19:31:06-03:00

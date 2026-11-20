@@ -1,7 +1,7 @@
 function createReportController({ reportService }) {
     return {
         async financialReport(req, res) {
-            res.json(await reportService.getFinancialReport());
+            res.json(await reportService.financialReport());
         },
     };
 }

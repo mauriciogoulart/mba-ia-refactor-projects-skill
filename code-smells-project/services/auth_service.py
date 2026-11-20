@@ -1,25 +1,17 @@
-from itsdangerous import BadSignature, URLSafeTimedSerializer
+"""Emissão e verificação de token assinado (itsdangerous, chave da configuração)."""
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 
-class AuthService:
-    """Emite e valida tokens assinados com a SECRET_KEY (expiração em segundos)."""
-
-    def __init__(self, secret_key, max_age, usuario_service):
-        self._serializador = URLSafeTimedSerializer(secret_key, salt="auth-token")
+class TokenService:
+    def __init__(self, secret_key, max_age):
+        self._serializer = URLSafeTimedSerializer(secret_key, salt="loja-auth-token")
         self._max_age = max_age
-        self._usuarios = usuario_service
 
-    def login(self, email, senha):
-        usuario = self._usuarios.autenticar(email, senha)
-        if usuario is None:
-            return None
-        return usuario, self._serializador.dumps({"id": usuario["id"]})
+    def emitir(self, usuario):
+        return self._serializer.dumps({"id": usuario["id"], "tipo": usuario["tipo"]})
 
-    def usuario_do_token(self, token):
+    def verificar(self, token):
         try:
-            dados = self._serializador.loads(token, max_age=self._max_age)
-        except BadSignature:
+            return self._serializer.loads(token, max_age=self._max_age)
+        except (BadSignature, SignatureExpired):
             return None
-        if not isinstance(dados, dict):
-            return None
-        return self._usuarios.buscar(dados.get("id"))

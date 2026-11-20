@@ -1,0 +1,28 @@
+### E-11 · Prova vermelha do teste de varredura de segredos/debug (F-001/F-002) no checkpoint
+Comando:      python -m pytest -p no:cacheprovider tests/test_unidade.py::test_f001_f002_codigo_sem_segredos_nem_debug_fixo --tb=short
+Diretório:    <tmp>\exec-p1\checkpoint-f001 (arquivos de `git show refactor-arch/checkpoint-20261116-195523` + teste novo)
+Origem:       K-05 · Classe B · Autorização: automática (classe B)
+Início/Fim:   2026-11-16T21:32:22-03:00 → 2026-11-16T21:32:23-03:00        Exit code: 1
+Ambiente:     Windows 11; Python 3.14.0 (.venv); Flask 3.1.1; flask-cors 5.0.1; pytest 9.2.0; requests 2.34.2
+Resultado:    esperado vermelho (failed 1); substitui a linha deste teste em E-08 (versão anterior dos padrões)
+
+Saída capturada (segredos mascarados):
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.2.0, pluggy-1.7.0
+rootdir: C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\checkpoint-f001
+configfile: pytest.ini
+collected 1 item
+
+tests\test_unidade.py F                                                  [100%]
+
+================================== FAILURES ===================================
+______________ test_f001_f002_codigo_sem_segredos_nem_debug_fixo ______________
+tests\test_unidade.py:37: in test_f001_f002_codigo_sem_segredos_nem_debug_fixo
+    assert achados == []
+E   assert [('app.py', '...)\\"\\s*\\)')] == []
+E     
+E     Left contains 6 more items, first extra item: ('app.py', 'SECRET_KEY[\\"\']?\\]?\\s*=\\s*[\\"\']')
+E     Use -v to get more diff
+=========================== short test summary info ===========================
+FAILED tests/test_unidade.py::test_f001_f002_codigo_sem_segredos_nem_debug_fixo
+============================== 1 failed in 0.16s ==============================

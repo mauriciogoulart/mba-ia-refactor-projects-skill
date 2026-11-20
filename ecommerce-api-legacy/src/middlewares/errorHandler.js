@@ -1,20 +1,17 @@
-const { STATUS_CODES } = require('node:http');
-const { AppError } = require('../utils/appError');
+const { MESSAGES } = require('../config/constants');
+const { AppError } = require('../errors/AppError');
 
-// Encaminha rejeições de handlers async ao tratador central.
-const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
-
-function createErrorHandler(logger) {
-    // eslint-disable-next-line no-unused-vars
+// Tratamento central: mantém respostas de erro em texto e nunca expõe detalhes internos ao cliente.
+function createErrorHandler({ logger }) {
+    // O quarto parâmetro é obrigatório para o Express reconhecer o middleware de erro.
     return (err, req, res, next) => {
+        if (res.headersSent) return next(err);
         if (err instanceof AppError) return res.status(err.status).send(err.message);
+        if (err.status >= 400 && err.status < 500) return res.status(err.status).send(MESSAGES.BAD_REQUEST);
 
-        // Erros 4xx do parser de corpo (JSON inválido, corpo grande): status preservado, sem detalhe interno.
-        if (err.status >= 400 && err.status < 500) return res.status(err.status).send(STATUS_CODES[err.status]);
-
-        logger.error('erro não tratado', { error: err.message, stack: err.stack, method: req.method, path: req.path });
-        return res.status(500).send('Erro interno');
+        logger.error('erro não tratado', { error: err.message, stack: err.stack });
+        return res.status(500).send(MESSAGES.INTERNAL_ERROR);
     };
 }
 
-module.exports = { asyncHandler, createErrorHandler };
+module.exports = { createErrorHandler };

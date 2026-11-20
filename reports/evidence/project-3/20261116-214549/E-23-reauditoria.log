@@ -1,0 +1,126 @@
+Comando:    D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe -B C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\reauditoria.py
+Diretório:  C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3
+Origem:     Passo R · catálogo 02 · Classe B
+Início/Fim: 2026-11-19T08:20:47-03:00 → 2026-11-19T08:20:50-03:00 (duração 2.8s)
+Exit code:  0
+------------------------------------------------------------
+Arquivos-fonte: 45; linhas: 1588
+
+[SEC-02 segredo literal] 0 ocorrência(s)
+
+
+[SEC-05 debug fixo/bind público] 0 ocorrência(s)
+
+
+[SEC-06 hash fraco] 1 ocorrência(s)
+  models\user.py:31: legado = hashlib.md5(pwd.encode(), usedforsecurity=False).hexdigest()
+
+[SEC-07 password serializado] 1 ocorrência(s)
+  validators\user_validator.py:43: return {**fields, 'password': password, 'role': data.get('role', ROLE_USER)}
+
+[SEC-08/QLT-04 print] 4 ocorrência(s)
+  seed.py:106: print("Seed concluído com sucesso!")
+  seed.py:107: print(f"  {User.query.count()} usuários")
+  seed.py:108: print(f"  {Category.query.count()} categorias")
+  seed.py:109: print(f"  {Task.query.count()} tasks")
+
+[SEC-09 token falso / CORS aberto] 0 ocorrência(s)
+
+
+[SEC-13 str(e) na resposta] 0 ocorrência(s)
+
+
+[ARC-09 except genérico] 0 ocorrência(s)
+
+
+[DEP-01 utcnow] 0 ocorrência(s)
+
+
+[DEP-02 Query.get] 0 ocorrência(s)
+
+
+[QLT-05 type()==] 0 ocorrência(s)
+
+
+[Identidade: usos de token/user_id da requisição] 21 ocorrência(s)
+  app.py:15: from services.token_service import TokenService
+  app.py:27: app.extensions['token_service'] = TokenService(settings.SECRET_KEY, settings.TOKEN_MAX_AGE_SECONDS)
+  controllers\auth_controller.py:15: 'token': current_app.extensions['token_service'].issue(user),
+  controllers\category_controller.py:12: categories = category_service.list_categories(limit, offset, current_user().task_scope())
+  controllers\task_controller.py:12: tasks = task_service.list_tasks(limit, offset, current_user())
+  controllers\task_controller.py:17: return jsonify(task_detail(task_service.get_accessible_task(task_id, current_user()))), 200
+  controllers\task_controller.py:21: task = task_service.create_task(parse_new_task(request.get_json()), current_user())
+  controllers\task_controller.py:26: actor = current_user()
+  controllers\task_controller.py:33: task_service.delete_task(task_service.get_accessible_task(task_id, current_user()))
+  controllers\task_controller.py:40: tasks = task_service.search_tasks(filters, limit, offset, current_user())
+  controllers\task_controller.py:45: return jsonify(task_service.get_stats(current_user().task_scope())), 200
+  controllers\user_controller.py:23: user = user_service.create_user(parse_new_user(request.get_json()), current_user())
+  controllers\user_controller.py:28: actor = current_user()
+  middleware\auth.py:13: return current_app.extensions['token_service'].verify(token.strip(), find_active_user)
+  middleware\auth.py:16: def current_user():
+  middleware\auth.py:24: g.current_user = _user_from_request()
+  middleware\auth.py:32: g.current_user = _user_from_request()
+  middleware\auth.py:33: if g.current_user is None:
+  middleware\auth.py:43: if not g.current_user.is_admin():
+  middleware\auth.py:54: if not g.current_user.is_staff():
+  middleware\auth.py:65: if g.current_user.id != kwargs['user_id'] and not g.current_user.is_staff():
+
+[QLT-03 imports sem uso]
+  total: 0
+
+[SEC-11 matriz de acesso: usuário comum A contra dados do usuário B]
+  ok    GET /tasks/1 negado -> 403
+  ok    PUT /tasks/1 negado -> 403
+  ok    DELETE /tasks/1 negado -> 403
+  ok    GET /users negado -> 403
+  ok    GET /users/1 negado -> 403
+  ok    GET /users/1/tasks negado -> 403
+  ok    PUT /users/1 negado -> 403
+  ok    DELETE /users/1 negado -> 403
+  ok    GET /reports/summary negado -> 403
+  ok    GET /reports/user/1 negado -> 403
+  ok    DELETE /categories/1 negado -> 403
+  ok    POST /tasks negado -> 403
+  ok    POST /tasks negado -> 403
+  ok    GET /tasks sem tasks de B -> 200
+  ok    GET /tasks/search?user_id=B vazio -> 200
+  ok    GET /tasks/search?q=Sigilosa vazio -> 200
+  ok    GET /tasks/stats total 0 -> 200
+  ok    GET /categories task_count 0 -> 200
+  ok    gestão vê a task de B -> 200
+
+[Token e identidade: id reaproveitado, troca de senha, desativação, troca de perfil]
+  ok    excluir Temp (admin) -> 200
+  id reaproveitado pelo novo cadastro: True
+  ok    token da conta excluída lê a conta herdeira -> 401
+  ok    token da conta excluída troca senha da herdeira -> 401
+  ok    token da conta excluída cria task -> 401
+  ok    token da conta excluída como identificação opcional em POST /users -> 403
+  ok    PUT /users/A troca a própria senha -> 200
+  ok    token anterior à troca de senha -> 401
+  ok    admin desativa A -> 200
+  ok    token de conta desativada -> 401
+  ok    admin reativa A -> 200
+  ok    admin rebaixa gerente a user -> 200
+  ok    token do ex-gerente perde a visão geral -> 403
+  falhas: 0
+
+[Pontos observados, declarados como residuais]
+  confirmado POST /categories por usuário comum (permitido) -> 201
+  confirmado PUT /categories por usuário comum (permitido) -> 200
+  confirmado POST /users com e-mail já cadastrado (409) -> 409
+  confirmado e-mail com caixa diferente cria outra conta -> 201
+  confirmado task alheia existente responde 403 -> 403
+  confirmado task inexistente responde 404 -> 404
+  confirmado PUT com id de 5000 dígitos -> 405
+  confirmado DELETE com id de 5000 dígitos -> 405
+2026-11-19 08:20:49,466 INFO services.user_service: Usuário criado user_id=4
+2026-11-19 08:20:49,933 INFO services.user_service: Usuário criado user_id=5
+2026-11-19 08:20:50,048 INFO services.user_service: Usuário deletado user_id=5
+2026-11-19 08:20:50,160 INFO services.user_service: Usuário criado user_id=5
+2026-11-19 08:20:50,276 INFO services.user_service: Usuário atualizado user_id=4
+2026-11-19 08:20:50,388 INFO services.user_service: Usuário atualizado user_id=4
+2026-11-19 08:20:50,391 INFO services.user_service: Usuário atualizado user_id=4
+2026-11-19 08:20:50,393 INFO services.user_service: Usuário atualizado user_id=2
+2026-11-19 08:20:50,396 INFO services.category_service: Categoria criada category_id=2
+2026-11-19 08:20:50,511 INFO services.user_service: Usuário criado user_id=6

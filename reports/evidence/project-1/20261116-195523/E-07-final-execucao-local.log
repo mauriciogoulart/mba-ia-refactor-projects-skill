@@ -1,0 +1,77 @@
+Comando: python v4_run.py <tmp>\exec-p1\v4-final E-07 final (cópia do código refatorado) | K-04 · Classe B (banco descartável <tmp>\exec-p1\v4-final\v4.db) | credenciais geradas por execução: SECRET_KEY 087c***, SEED_ADMIN_PASSWORD OLf9***, SEED_CLIENTE_PASSWORD r5oX*** + token via POST /login
+Rótulo: final | Início: 2026-11-16T21:29:44-03:00 | Diretório da app: C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p1\v4-final | PID: 18776
+Pronto: True em 2026-11-16T21:29:45-03:00
+Bancos encontrados no diretório descartável (classe A, antes de rotas destrutivas): ['C:\\Users\\maury\\AppData\\Local\\Temp\\claude\\5e8788bb76161e32\\b6ba369c-f235-496e-bc99-b1782d5fead4\\scratchpad\\exec-p1\\v4-final\\v4.db']
+01 GET    /                                cred=sem       status=200 14ms chaves={endpoints,mensagem,versao}
+02 GET    /health                          cred=sem       status=200 16ms chaves={ambiente,counts,database,status,versao}
+   health chaves sensíveis presentes: []
+03 GET    /produtos                        cred=sem       status=200 4ms chaves={dados,sucesso} dados[0]{ativo,categoria,criado_em,descricao,estoque,id,nome,preco}
+04 GET    /produtos/busca                  cred=sem       status=200 3ms chaves={dados,sucesso,total} dados[0]{ativo,categoria,criado_em,descricao,estoque,id,nome,preco}
+05 GET    /produtos/1                      cred=sem       status=200 23ms chaves={dados,sucesso} dados{ativo,categoria,criado_em,descricao,estoque,id,nome,preco}
+06 POST   /login                           cred=admin     status=200 121ms chaves={dados,mensagem,sucesso} dados{email,id,nome,tipo,token}
+   token admin: eyJp***
+07 POST   /login                           cred=sqli      status=401 4ms chaves={erro,sucesso}
+08 POST   /usuarios                        cred=sem       status=201 131ms chaves={dados,sucesso} dados{id}
+09 POST   /login                           cred=cliente   status=200 133ms chaves={dados,mensagem,sucesso} dados{email,id,nome,tipo,token}
+   token cliente: eyJp***; cliente id=4
+10 POST   /produtos                        cred=sem       status=401 3ms chaves={erro,sucesso}
+11 POST   /produtos                        cred=inválida  status=401 15ms chaves={erro,sucesso}
+12 POST   /produtos                        cred=cliente   status=403 16ms chaves={erro,sucesso}
+13 POST   /produtos                        cred=admin     status=201 24ms chaves={dados,mensagem,sucesso} dados{id}
+14 PUT    /produtos/11                     cred=sem       status=401 6ms chaves={erro,sucesso}
+15 PUT    /produtos/11                     cred=admin     status=200 26ms chaves={mensagem,sucesso}
+16 GET    /usuarios                        cred=sem       status=401 4ms chaves={erro,sucesso}
+17 GET    /usuarios                        cred=cliente   status=403 17ms chaves={erro,sucesso}
+18 GET    /usuarios                        cred=admin     status=200 15ms chaves={dados,sucesso} dados[0]{criado_em,email,id,nome,tipo}
+   'senha' na listagem (admin): False
+19 GET    /usuarios/4                      cred=sem       status=401 14ms chaves={erro,sucesso}
+20 GET    /usuarios/4                      cred=cliente   status=200 16ms chaves={dados,sucesso} dados{criado_em,email,id,nome,tipo}
+   'senha' no próprio usuário: False
+21 GET    /usuarios/1                      cred=cliente   status=403 15ms chaves={erro,sucesso}
+22 GET    /usuarios/4                      cred=admin     status=200 15ms chaves={dados,sucesso} dados{criado_em,email,id,nome,tipo}
+23 POST   /pedidos                         cred=sem       status=401 14ms chaves={erro,sucesso}
+24 POST   /pedidos                         cred=cliente   status=201 25ms chaves={dados,mensagem,sucesso} dados{pedido_id,total}
+25 POST   /pedidos                         cred=cliente   status=403 7ms chaves={erro,sucesso}
+26 POST   /pedidos                         cred=cliente   status=400 15ms chaves={erro,sucesso}
+27 POST   /pedidos                         cred=admin     status=400 3ms chaves={erro,sucesso}
+28 GET    /pedidos                         cred=sem       status=401 10ms chaves={erro,sucesso}
+29 GET    /pedidos                         cred=cliente   status=403 3ms chaves={erro,sucesso}
+30 GET    /pedidos                         cred=admin     status=200 4ms chaves={dados,sucesso} dados[0]{criado_em,id,itens,status,total,usuario_id}
+31 GET    /pedidos/usuario/4               cred=sem       status=401 3ms chaves={erro,sucesso}
+32 GET    /pedidos/usuario/4               cred=cliente   status=200 3ms chaves={dados,sucesso} dados[0]{criado_em,id,itens,status,total,usuario_id}
+33 GET    /pedidos/usuario/1               cred=cliente   status=403 16ms chaves={erro,sucesso}
+34 GET    /pedidos/usuario/4               cred=admin     status=200 4ms chaves={dados,sucesso} dados[0]{criado_em,id,itens,status,total,usuario_id}
+35 PUT    /pedidos/1/status                cred=sem       status=401 10ms chaves={erro,sucesso}
+36 PUT    /pedidos/1/status                cred=cliente   status=403 4ms chaves={erro,sucesso}
+37 PUT    /pedidos/1/status                cred=admin     status=200 21ms chaves={mensagem,sucesso}
+38 PUT    /pedidos/99999999/status         cred=admin     status=404 4ms chaves={erro,sucesso}
+39 GET    /relatorios/vendas               cred=sem       status=401 3ms chaves={erro,sucesso}
+40 GET    /relatorios/vendas               cred=inválida  status=401 13ms chaves={erro,sucesso}
+41 GET    /relatorios/vendas               cred=cliente   status=403 15ms chaves={erro,sucesso}
+42 GET    /relatorios/vendas               cred=admin     status=200 3ms chaves={dados,sucesso} dados{desconto_aplicavel,faturamento_bruto,faturamento_liquido,pedidos_aprovados,pedidos_cancelados,pedidos_pendentes,ticket_medio,total_pedidos}
+43 POST   /admin/query                     cred=sem       status=404 11ms chaves=<não-JSON>
+44 POST   /admin/query                     cred=admin     status=404 2ms chaves=<não-JSON>
+45 POST   /usuarios                        cred=sem       status=400 13ms chaves={erro,sucesso}
+46 DELETE /produtos/11                     cred=sem       status=401 2ms chaves={erro,sucesso}
+47 DELETE /produtos/11                     cred=cliente   status=403 13ms chaves={erro,sucesso}
+48 DELETE /produtos/11                     cred=admin     status=200 22ms chaves={mensagem,sucesso}
+49 POST   /admin/reset-db                  cred=sem       status=401 7ms chaves={erro,sucesso}
+50 POST   /admin/reset-db                  cred=cliente   status=403 6ms chaves={erro,sucesso}
+51 POST   /admin/reset-db                  cred=admin     status=200 13ms chaves={mensagem,sucesso}
+52 GET    /health                          cred=sem       status=200 13ms chaves={ambiente,counts,database,status,versao}
+   counts após reset: {"pedidos": 0, "produtos": 0, "usuarios": 0}
+loja.db do projeto inalterado (mtime): True
+Fim: 2026-11-16T21:29:47-03:00 | processo encerrado (exit 1) | porta 5000 livre: True
+Log do servidor (primeiras linhas):
+  2026-11-16 21:29:44,876 INFO __main__: Servidor iniciado em http://127.0.0.1:5000
+   * Serving Flask app 'app'
+   * Debug mode: off
+  2026-11-16 21:29:44,887 INFO werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+   * Running on http://127.0.0.1:5000
+  2026-11-16 21:29:44,887 INFO werkzeug: [33mPress CTRL+C to quit[0m
+  2026-11-16 21:29:45,553 INFO werkzeug: 127.0.0.1 - - [16/Nov/2026 21:29:45] "GET /health HTTP/1.1" 200 -
+  2026-11-16 21:29:45,867 INFO werkzeug: 127.0.0.1 - - [16/Nov/2026 21:29:45] "GET / HTTP/1.1" 200 -
+  2026-11-16 21:29:45,883 INFO werkzeug: 127.0.0.1 - - [16/Nov/2026 21:29:45] "GET /health HTTP/1.1" 200 -
+  2026-11-16 21:29:45,887 INFO controllers.produto_controller: Listando 10 produtos
+  2026-11-16 21:29:45,888 INFO werkzeug: 127.0.0.1 - - [16/Nov/2026 21:29:45] "GET /produtos HTTP/1.1" 200 -
+  2026-11-16 21:29:45,892 INFO werkzeug: 127.0.0.1 - - [16/Nov/2026 21:29:45] "GET /produtos/busca?q=Mouse HTTP/1.1" 200 -

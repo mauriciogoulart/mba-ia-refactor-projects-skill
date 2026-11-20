@@ -1,40 +1,33 @@
-const { PAYMENT_STATUS } = require('../config/constants');
-const { AppError } = require('../utils/appError');
-const { centsToReais } = require('../utils/money');
+const { CENTS_PER_UNIT, PAYMENT_STATUS } = require('../config/constants');
 
-function createReportService({ reportModel, logger }) {
-    async function getFinancialReport() {
-        let rows;
-        try {
-            rows = await reportModel.listCourseEnrollments();
-        } catch (err) {
-            logger.error('relatório: falha na consulta', { error: err.message });
-            throw new AppError(500, 'Erro DB');
-        }
+const UNKNOWN_STUDENT = 'Unknown';
+const toUnits = (cents) => cents / CENTS_PER_UNIT;
 
-        const byCourse = new Map();
+function createReportService({ reportModel }) {
+    async function financialReport() {
+        const rows = await reportModel.listCourseEnrollments();
+        const courses = new Map();
+
         for (const row of rows) {
-            if (!byCourse.has(row.courseId)) {
-                byCourse.set(row.courseId, { course: row.courseTitle, revenueCents: 0, students: [] });
+            if (!courses.has(row.courseId)) {
+                courses.set(row.courseId, { course: row.courseTitle, revenueCents: 0, students: [] });
             }
             if (row.enrollmentId === null) continue;
 
-            const item = byCourse.get(row.courseId);
-            if (row.paymentStatus === PAYMENT_STATUS.PAID) item.revenueCents += row.amountCents;
-            item.students.push({
-                student: row.studentName ?? 'Unknown',
-                paid: row.amountCents === null ? 0 : centsToReais(row.amountCents),
-            });
+            const entry = courses.get(row.courseId);
+            const amountCents = row.amountCents || 0;
+            if (row.paymentStatus === PAYMENT_STATUS.PAID) entry.revenueCents += amountCents;
+            entry.students.push({ student: row.studentName || UNKNOWN_STUDENT, paid: toUnits(amountCents) });
         }
 
-        return [...byCourse.values()].map(({ course, revenueCents, students }) => ({
+        return [...courses.values()].map(({ course, revenueCents, students }) => ({
             course,
-            revenue: centsToReais(revenueCents),
+            revenue: toUnits(revenueCents),
             students,
         }));
     }
 
-    return { getFinancialReport };
+    return { financialReport };
 }
 
 module.exports = { createReportService };

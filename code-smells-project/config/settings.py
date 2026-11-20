@@ -1,29 +1,24 @@
 """Configuração da aplicação lida do ambiente (nenhum segredo literal no código)."""
 import os
-
-APP_VERSAO = "1.0.0"
-
-
-def _bool(valor, padrao):
-    if valor is None or valor.strip() == "":
-        return padrao
-    return valor.strip().lower() in ("1", "true", "yes", "sim")
+import secrets
 
 
 class Settings:
-    def __init__(self, ambiente=None):
-        env = os.environ if ambiente is None else ambiente
-        self.debug = _bool(env.get("APP_DEBUG"), False)
-        self.host = env.get("APP_HOST", "127.0.0.1")
-        self.port = int(env.get("APP_PORT", "5000"))
-        self.ambiente = env.get("APP_ENV", "producao")
-        self.db_path = env.get("DB_PATH", "loja.db")
-        # Sem SECRET_KEY definida, app.py gera uma chave aleatória por processo (tokens expiram ao reiniciar).
-        self.secret_key = env.get("SECRET_KEY") or None
-        self.token_max_age = int(env.get("TOKEN_MAX_AGE", "3600"))
-        self.cors_origins = [o.strip() for o in env.get("CORS_ORIGINS", "").split(",") if o.strip()]
-        # Senhas do seed de usuários: sem valor padrão; sem a variável, o usuário não é semeado.
-        self.seed_admin_password = env.get("SEED_ADMIN_PASSWORD") or None
-        self.seed_cliente_password = env.get("SEED_CLIENTE_PASSWORD") or None
-        self.allow_destructive = _bool(env.get("ALLOW_DESTRUCTIVE"), False)
-        self.log_level = env.get("LOG_LEVEL", "INFO").upper()
+    def __init__(self, env=None):
+        env = os.environ if env is None else env
+        chave = env.get("SECRET_KEY")
+        # Sem SECRET_KEY definida, gera uma chave aleatória por processo (tokens expiram ao reiniciar).
+        self.SECRET_KEY = chave or secrets.token_hex(32)
+        self.SECRET_KEY_GERADA = not chave
+        self.DEBUG = env.get("APP_DEBUG", "false").lower() == "true"
+        self.HOST = env.get("APP_HOST", "127.0.0.1")
+        self.PORT = int(env.get("APP_PORT", "5000"))
+        self.AMBIENTE = env.get("APP_ENV", "producao")
+        self.DB_PATH = env.get("DB_PATH", "loja.db")
+        self.CORS_ORIGINS = [o.strip() for o in env.get("CORS_ORIGINS", "").split(",") if o.strip()]
+        # Senhas dos usuários de demonstração: sem valor padrão; sem a variável, o usuário não é semeado.
+        self.SEED_ADMIN_PASSWORD = env.get("SEED_ADMIN_PASSWORD")
+        self.SEED_CLIENTE_PASSWORD = env.get("SEED_CLIENTE_PASSWORD")
+        self.TOKEN_MAX_AGE = int(env.get("TOKEN_MAX_AGE", "3600"))
+        self.LOGIN_MAX_TENTATIVAS = int(env.get("LOGIN_MAX_TENTATIVAS", "5"))
+        self.LOGIN_JANELA_SEGUNDOS = int(env.get("LOGIN_JANELA_SEGUNDOS", "300"))

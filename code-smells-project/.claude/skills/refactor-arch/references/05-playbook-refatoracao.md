@@ -4,25 +4,25 @@ Use na **Fase 3**, depois do baseline. Cada padrão `P-xx` resolve anti-patterns
 
 ## 0. Regras gerais
 
-1. **Preserve o contrato público** (rotas, métodos, chaves e formato das respostas, status). Padrões que mudam contrato estão marcados **[contrato]** e só se aplicam com `CT-xx` aprovado ou na variante compatível.
+1. **Preserve o contrato público** (rotas, métodos, chaves e formato das respostas, status). Padrões que mudam contrato estão marcados **[contrato]** e só se aplicam com `CT-xx` aprovado (todos em **Refatorar**; no **Híbrido**, os ligados a findings CRITICAL/HIGH, na variante mínima) ou na variante compatível.
 2. **Ordem canônica de aplicação** (cada passo seguido de verificação rápida de sintaxe/import — classe B):
-   `P-01 config` → `P-18 dependências` (se aprovado) → `P-08 models/dados` (+ `P-02`, `P-17`, `P-10`) → `P-09 services` → `P-07 validação` → `P-04 serialização` → `P-05 auth/admin` → `P-06 erros` → `P-15 logs` → `P-12 async` / `P-11 N+1` → `P-13 DI/composition root` → `P-19 proteções HTTP` → `P-14 deprecated` → `P-16 limpeza`.
-3. Dependências entre padrões: P-09 exige P-08; P-13 vem depois de P-08/P-09; P-04 antes de P-05; P-06 antes de remover `str(e)` dos controllers.
-4. **Testes** seguem a política de `06-protocolo-validacao.md`, seção 8: adaptar com sentido (T1 mecânica, T2 contrato) é permitido; enfraquecer, remover ou pular teste para fazê-lo passar é **proibido** (T3); testes novos só na Opção 2 (T4).
+   `P-01 config` → `P-18 dependências` (se aprovado) → `P-08 models/dados` (+ `P-02`, `P-17`, `P-10`) → `P-09 services` → `P-20 gateway de pagamento` (se houver fluxo de pagamento) → `P-07 validação` → `P-04 serialização` → `P-05 auth/admin` → `P-06 erros` → `P-15 logs` → `P-12 async` / `P-11 N+1` → `P-13 DI/composition root` → `P-19 proteções HTTP` → `P-14 deprecated` → `P-16 limpeza`.
+3. Dependências entre padrões: P-09 exige P-08; P-20 exige P-01 e P-09; P-13 vem depois de P-08/P-09; P-04 antes de P-05; P-06 antes de remover `str(e)` dos controllers.
+4. **Testes** seguem a política de `06-protocolo-validacao.md`, seção 8: adaptar com sentido (T1 mecânica, T2 contrato) é permitido; enfraquecer, remover ou pular teste para fazê-lo passar é **proibido** (T3); testes novos (T4, unidade ou integração) **comprovam** cada `CT-xx` aplicado e cada correção CRITICAL/HIGH, em qualquer opção.
 5. Um padrão por vez; se a validação rápida falhar, corrija ou reverta aquele padrão antes de seguir.
 6. Em todo padrão: depois de aplicar, **rebusque** o sinal do anti-pattern no código para confirmar que sumiu.
-7. **Opção de contrato (P3 da rodada de perguntas).** Aplique cada padrão conforme a opção escolhida pelo usuário:
+7. **Opção de contrato (P3 da rodada de perguntas).** Aplique cada padrão conforme a opção escolhida pelo usuário (`07`, seção 4.1). **Variante mínima** (Híbrido) = a menor mudança que elimina o risco CRITICAL/HIGH: mesmas rotas, métodos, payloads e respostas para o cliente legítimo; só o acesso indevido passa a ser negado.
 
-| Padrão | Opção 1 — manter o contrato | Opção 2 — atualizar |
-|---|---|---|
-| P-01, P-02, P-03, P-07, P-08 a P-10, P-12 a P-16, P-18 | aplica | aplica |
-| P-06 (erros) | aplica; mantém status e formato do corpo; só deixa de vazar detalhe interno (contrato de erro, listado) | aplica |
-| P-04 (campos sensíveis) | **mantém a chave e neutraliza o valor** (ex.: `"senha": null`) | omite o campo + teste de ausência |
-| P-05 (auth/admin) | **não aplica**: o finding fica **residual** com a recomendação "reexecutar com a Opção 2" | aplica + testes (sem credencial ⇒ 401/403; com credencial ⇒ sucesso) |
-| P-19 (CORS restritivo) | só rate limit e cabeçalhos aditivos; CORS padrão inalterado (residual) | restringe + prova |
-| P-11 (paginação), P-17 (tipo numérico) | só se retrocompatível (parâmetro opcional, mesmo formato numérico) | pode mudar contrato + prova |
+| Padrão | Refatorar (recomendado) | Manter contrato\* | Híbrido |
+|---|---|---|---|
+| P-01, P-02, P-03, P-07, P-08 a P-10, P-12 a P-16, P-18, **P-20** | aplica | aplica (P-07 só a parte retrocompatível, ex.: tipo inválido ⇒ mesma resposta de erro já existente) | aplica |
+| P-06 (erros) | aplica | aplica; mantém status e formato do corpo; só deixa de vazar detalhe interno (contrato de erro, listado) | aplica; mantém status e formato do corpo nos casos MEDIUM/LOW |
+| P-04 (campos sensíveis) | omite o campo + teste de ausência | **mantém a chave e neutraliza o valor** (ex.: `"senha": null`) | omite o campo se o finding for CRITICAL/HIGH (+ teste); senão neutraliza o valor |
+| P-05 (auth/admin) | aplica + testes (sem credencial ⇒ 401/403; com credencial ⇒ sucesso) | **não aplica**: o finding fica **residual**, só depois da segunda confirmação (`07`, seção 4.2), com a recomendação "reexecutar com Refatorar ou Híbrido" | aplica a **variante mínima** nos findings CRITICAL/HIGH + os mesmos testes |
+| P-19 (CORS restritivo) | restringe + prova | só rate limit e cabeçalhos aditivos; CORS padrão inalterado (residual) | restringe + prova se ligado a finding CRITICAL/HIGH; senão só rate limit e cabeçalhos aditivos |
+| P-11 (paginação), P-17 (tipo numérico) | pode mudar contrato + prova | só se retrocompatível (parâmetro opcional, mesmo formato numérico) | só se retrocompatível |
 
-   Na Opção 2, **cada** mudança de contrato aplicada precisa de prova gerada pela refatoração (`06`, seção 8.9) e de justificativa no anexo (`03`, "Contratos — resultado"). Na Opção 1, nada muda no contrato: o que não puder ser corrigido sem mudá-lo vira residual declarado.
+   Em **Refatorar** e **Híbrido**, **cada** mudança de contrato aplicada precisa de prova gerada pela refatoração (`06`, seção 8.9) e de justificativa no anexo (`03`, "Contratos — resultado"); com essas opções **nenhum CRITICAL/HIGH pode terminar residual**. Em **Manter contrato\***, nada muda no contrato: o que não puder ser corrigido sem mudá-lo vira residual declarado — CRITICAL/HIGH somente depois da segunda confirmação do usuário. Em **qualquer** opção, correções CRITICAL/HIGH compatíveis (sem contrato, ex.: hash de senha, P-20) também recebem teste de prova.
 
 ---
 
@@ -71,7 +71,7 @@ module.exports = {
   paymentGatewayKey: process.env.PAYMENT_GATEWAY_KEY,
 };
 ```
-**Passos:** (1) criar módulo de config; (2) substituir cada literal por leitura de ambiente; (3) adicionar `.env.example` com **nomes** e valores fictícios; (4) garantir que `.env` real esteja no `.gitignore`; (5) falhar de forma clara se um segredo obrigatório faltar fora de dev; (6) manter o comportamento atual do boot (valores de dev padrão) para o projeto continuar subindo.
+**Passos:** (1) criar módulo de config; (2) substituir cada literal por leitura de ambiente; (3) adicionar `.env.example` com **nomes** e valores fictícios; (4) garantir que `.env` real esteja no `.gitignore`; (5) falhar de forma clara se um segredo obrigatório faltar fora de dev; (6) manter o comportamento atual do boot (valores de dev padrão) para o projeto continuar subindo — **exceto** valores que liberam bem ou acesso: provedor de pagamento mock, modo debug e credenciais nunca são padrão (P-20, SEC-05, SEC-02).
 **Riscos:** o projeto passa a depender de variáveis; deixe o padrão de desenvolvimento funcionando para não quebrar o boot. **O segredo antigo continua no histórico do git — recomende rotacioná-lo** (registre no relatório, não execute nada).
 **Validar:** busca por literais de segredo/debug fixo não retorna nada; boot ok.
 
@@ -100,7 +100,7 @@ else:
 os.environ["SEED_ADMIN_PASSWORD"] = "senha-de-teste"
 ```
 **Passos:** (1) mover o literal para variável de ambiente lida pela config; (2) gravar com hash (P-03); (3) seed de usuários só em dev/teste e só se a variável existir; (4) a fixture/setup dos testes define a variável; (5) documentar a variável no `.env.example`.
-**Contrato:** se o conjunto de usuários de seed observável por clientes mudar (ex.: listagem sem o admin de exemplo), registre em "Correções que exigem mudança de contrato"; na Opção 1, mantenha o mesmo conjunto de dados quando a variável estiver definida.
+**Contrato:** se o conjunto de usuários de seed observável por clientes mudar (ex.: listagem sem o admin de exemplo), registre em "Correções que exigem mudança de contrato"; em Manter contrato\*, mantenha o mesmo conjunto de dados quando a variável estiver definida. As mesmas variáveis de seed são o mecanismo que testes e execução local autenticada usam para gerar credenciais de teste (`06`, seção 5.1).
 **Validar:** busca por senha literal no seed = vazio; a suíte passa com a variável definida pela fixture.
 
 ## P-02 · Parametrizar consultas
@@ -140,7 +140,7 @@ def check_password(self, pwd): return check_password_hash(self.password, pwd)
 **Validar:** criar usuário e logar (testes existentes ou rota do projeto); registrar que usuários antigos migram no próximo login.
 
 ## P-04 · Serialização de saída sem campos sensíveis (DTO)
-**Resolve:** SEC-07 · **Contrato:** depende da opção (matriz da seção 0, regra 7): **Opção 1** neutraliza o valor e mantém a chave; **Opção 2** omite o campo **[contrato]**
+**Resolve:** SEC-07 · **Contrato:** depende da opção (matriz da seção 0, regra 7): **Manter contrato\*** neutraliza o valor e mantém a chave; **Refatorar** omite o campo **[contrato]**; **Híbrido** omite quando o finding é CRITICAL/HIGH e neutraliza nos demais
 
 **Antes**
 ```python
@@ -155,18 +155,19 @@ def user_to_public(u): return {k: getattr(u, k) for k in PUBLIC_FIELDS}
 ```
 **Node:** `const toPublic = ({ id, name, email }) => ({ id, name, email });`
 **Passos:** (1) criar função/serializador de saída por entidade com **lista branca** de campos; (2) usar em todas as rotas que devolvem a entidade; (3) remover configuração interna do endpoint de saúde; (4) listar no relatório os campos removidos como mudança de contrato.
-**Opção 1 (manter contrato):** o serializador devolve **as mesmas chaves**, com valor neutralizado nos campos sensíveis: `{"id": 1, "email": "a@b.c", "senha": None}`; em saúde/diagnóstico, `"secret_key": None`, `"db_path": None`, `"debug": False`. O formato não muda; o vazamento some. Registre o ajuste em "Mudanças aplicadas".
-**Opção 2 (atualizar):** omite o campo (lista branca acima) e **prova** com teste: `assert "senha" not in resposta.json()[0]` (T4), verde no código refatorado e vermelho no checkpoint (`06`, seção 8.9). Preencha a justificativa e a prova no anexo.
-**Validar:** Opção 1: rota igual (mesmas chaves) e nenhum valor sensível na resposta; Opção 2: rota igual exceto campos removidos (`ALTERADO (aprovado)`) com `E-nn`.
+**Manter contrato\* (e Híbrido para findings MEDIUM/LOW):** o serializador devolve **as mesmas chaves**, com valor neutralizado nos campos sensíveis: `{"id": 1, "email": "a@b.c", "senha": None}`; em saúde/diagnóstico, `"secret_key": None`, `"db_path": None`, `"debug": False`. O formato não muda; o vazamento some. Registre o ajuste em "Mudanças aplicadas".
+**Refatorar (e Híbrido para findings CRITICAL/HIGH):** omite o campo (lista branca acima) e **prova** com teste: `assert "senha" not in resposta.json()[0]` (T4), verde no código refatorado e vermelho no checkpoint (`06`, seção 8.9). Preencha a justificativa e a prova no anexo.
+**Validar:** valor neutralizado: rota igual (mesmas chaves) e nenhum valor sensível na resposta; campo omitido: rota igual exceto campos removidos (`ALTERADO (aprovado)`) com `E-nn`.
 
 ## P-05 · Autenticação/autorização e proteção de rotas administrativas
-**Resolve:** SEC-03, SEC-04, SEC-09, SEC-10, SEC-11 · **Contrato:** **[contrato]** — **só na Opção 2** (rotas passam a exigir credencial ou são removidas). Na Opção 1 este padrão **não é aplicado**: os findings ficam residuais com a recomendação "reexecutar com a Opção 2".
+**Resolve:** SEC-03, SEC-04, SEC-09, SEC-10, SEC-11 · **Contrato:** **[contrato]** — aplicado em **Refatorar** (rotas passam a exigir credencial ou são removidas) e, no **Híbrido**, na variante mínima para os findings CRITICAL/HIGH (exigir credencial só onde é preciso; rotas, payloads e respostas iguais para o cliente autenticado). Em **Manter contrato\*** este padrão **não é aplicado**: os findings ficam residuais, só depois da segunda confirmação (`07`, seção 4.2), com a recomendação "reexecutar com Refatorar ou Híbrido".
 
 **Variantes:**
 - **Remover** (padrão para execução de SQL/comando arbitrário vindo do cliente — SEC-04): apagar a rota e o handler. `CT-xx` obrigatório.
 - **Proteger** (reset, relatórios, exclusão): exigir autenticação + perfil e, para ações destrutivas, flag explícita de ambiente.
 - **Autorização de propriedade** (SEC-11): comparar o dono do recurso com a identidade autenticada.
 - **Privilégio** (SEC-10): descartar `role`/`active` do corpo salvo se o chamador for admin.
+- **Credencial no payload não verificada** (SEC-09): o fluxo recebe identificação + senha no corpo (ex.: e-mail de conta existente) mas age em nome da conta sem conferir a senha. Correção: verificar a senha contra o hash (P-03) antes de qualquer escrita; divergência ⇒ 401 e nada gravado. **Variante mínima (Híbrido):** só o caso de senha errada muda (⇒ 401); payload, rota e demais respostas iguais. Prova: teste com senha errada ⇒ 401 e dados inalterados; senha correta ⇒ resposta original.
 
 **Depois (Python — decorador)**
 ```python
@@ -197,9 +198,9 @@ const requireRole = (...roles) => (req, res, next) => {
 };
 router.delete("/api/users/:id", requireRole("admin"), usersController.remove);
 ```
-**Passos:** (1) se o projeto **não tem** mecanismo de identidade, introduza o mínimo compatível com a stack já usada (token assinado com chave da config, p. ex. JWT) **ou** proteja as rotas críticas por chave de administração vinda do ambiente e pergunte ao usuário qual caminho prefere (decisão de design, não presuma); (2) um único middleware/decorador; (3) aplicar nas rotas listadas como administrativas/destrutivas e em todas que expõem dados de usuários; (4) corrigir o login para emitir credencial verificável; (5) registrar mudanças de contrato (clientes passam a enviar credencial).
-**Riscos:** quebra clientes existentes — por isso é `CT-xx` e só se aplica com a Opção 2.
-**Provas exigidas (Opção 2, `06` seção 8.9)** — exemplo de testes no framework existente (T4/T2):
+**Passos:** (1) se o projeto **não tem** mecanismo de identidade, introduza o mínimo compatível com a stack já usada (token assinado com chave da config, p. ex. JWT) **ou** proteja as rotas críticas por chave de administração vinda do ambiente e pergunte ao usuário qual caminho prefere (decisão de design, não presuma); (2) um único middleware/decorador; (3) aplicar nas rotas listadas como administrativas/destrutivas e em todas que expõem dados de usuários; (4) corrigir o login para emitir credencial verificável; (5) credenciais de teste vêm da **própria aplicação**: senhas de seed por variável de ambiente (P-01) e token obtido pelo login — é assim que os testes (fixture com variáveis no processo da aplicação, T1) e a execução local autenticada (`06`, seção 5.1) se autenticam; (6) registrar mudanças de contrato (clientes passam a enviar credencial).
+**Riscos:** quebra clientes existentes — por isso é `CT-xx` e só se aplica com Refatorar ou Híbrido.
+**Provas exigidas (Refatorar/Híbrido, `06` seção 8.9)** — exemplo de testes no framework existente (T4/T2):
 ```python
 def test_relatorio_exige_token(client):
     assert client.get("/relatorios/vendas").status_code == 401            # sem credencial
@@ -210,7 +211,7 @@ def test_relatorio_com_token_admin(client, admin_token):
     assert r.status_code == 200                                              # asserção original mantida
 ```
 Cada teste: verde no código refatorado e, quando viável, **vermelho** no checkpoint do código original (prova de sensibilidade). Rota removida: `assert client.post("/admin/query", json={...}).status_code in (404, 405)`.
-**Validar:** rota sem credencial ⇒ 401/403; com credencial ⇒ comportamento original; evidências `E-nn` no anexo (nada destrutivo em sondagem ad hoc).
+**Validar:** rota sem credencial ⇒ 401/403; com credencial ⇒ comportamento original; evidências `E-nn` no anexo, incluindo a execução local autenticada (`06`, seção 5.1; rotas destrutivas só no banco descartável).
 
 ## P-06 · Tratamento de erros centralizado
 **Resolve:** SEC-13, ARC-09 · **Contrato:** pode alterar o corpo de erros 500 (formato/mensagem)
@@ -326,7 +327,7 @@ def criar():
     pedido_id = pedido_service.criar_pedido(dados["usuario_id"], dados["itens"], produtos_repo, pedidos_repo)
     return jsonify({"dados": {"pedido_id": pedido_id}, "sucesso": True}), 201
 ```
-**Passos:** (1) identificar regra no handler; (2) mover para função/classe de service que recebe dependências; (3) controller só valida e traduz; (4) preço/total e aprovação de pagamento calculados/decididos no servidor — em fluxo de pagamento simulado, isole o gateway atrás de uma interface (`PaymentGateway`) e mantenha o comportamento de teste atual, **sinalizando** no relatório que a integração real é necessária.
+**Passos:** (1) identificar regra no handler; (2) mover para função/classe de service que recebe dependências; (3) controller só valida e traduz; (4) preço/total calculados no servidor; a aprovação de pagamento é decidida por um gateway injetável — **isolar não basta**: aplique **P-20** (recusa por padrão sem provedor configurado; simulador só como provedor mock ativado por configuração fora de produção).
 **Validar:** mesmas respostas; regra testável sem HTTP.
 
 ## P-10 · Transações, atomicidade e integridade referencial
@@ -476,7 +477,7 @@ Remova do manifesto pacotes declarados e nunca importados (confirme por busca); 
 **Validar:** instalar (se permitido) e rodar a validação; sem imports quebrados.
 
 ## P-19 · Proteções HTTP básicas
-**Resolve:** SEC-17, SEC-09 (CORS) · **Contrato:** cabeçalhos de segurança e rate limit são aditivos (Opção 1 e 2); **restringir o CORS padrão afeta clientes de outras origens** e só se aplica na Opção 2 (com prova)
+**Resolve:** SEC-17, SEC-09 (CORS) · **Contrato:** cabeçalhos de segurança e rate limit são aditivos (todas as opções); **restringir o CORS padrão afeta clientes de outras origens** e só se aplica em Refatorar ou, no Híbrido, quando ligado a finding CRITICAL/HIGH (com prova)
 
 ```js
 app.use(helmet());
@@ -489,3 +490,100 @@ CORS(app, origins=Settings.CORS_ORIGINS)                 # lista branca; padrão
 Use as bibliotecas já presentes ou equivalentes simples; se exigir nova dependência, é P-18/classe C.
 **Cuidado:** limites de taxa muito baixos quebram clientes; use padrões conservadores e configuráveis.
 **Validar:** rotas continuam respondendo; cabeçalhos presentes (inspecione uma resposta).
+
+## P-20 · Gateway de pagamento por configuração com recusa por padrão
+**Resolve:** SEC-14 (aprovação de pagamento simulada ou por heurística) · **Contrato:** não muda rotas, payload nem formato das respostas; muda **quem decide** a aprovação. Sem provedor configurado, o pagamento é **recusado** com a resposta de recusa que o projeto já tem (mesmo status e formato) — mudança de resultado registrada como `ALTERADO (correção F-xxx, sem contrato)` (`06`, seção 6). Se o projeto não tiver resposta de recusa e a recusa exigir status novo, isso é um `CT-xx` identificado já na Fase 2: em Manter contrato\* ele não é aplicado e o SEC-14 entra na contagem do asterisco. Aplica-se em **todas** as opções de contrato.
+
+**Por que isolar não basta:** um adapter "simulado" que continua aprovando por heurística em qualquer ambiente mantém o bem liberado sem cobrança — o finding continua CRITICAL. A correção exige três coisas: (a) a decisão vem de um **provedor configurado**; (b) **ausência de provedor recusa** (fail-closed), inclusive com valor desconhecido na configuração; (c) o simulador existe só como provedor **mock**, ativado por configuração explícita, permitido só em ambiente **explicitamente** de teste/desenvolvimento (lista branca: ambiente ausente também bloqueia) e **nunca** como valor padrão (nem no código, nem no `.env.example`, nem em scripts de start).
+
+**Antes (Node)**
+```js
+let status = cc.startsWith("4") ? "PAID" : "DENIED";        // heurística decide a cobrança
+```
+**Depois (Node)**
+```js
+// services/payment/gatewayFactory.js
+const MOCK_ALLOWED_ENVS = new Set(["test", "development"]);   // lista branca; ambiente ausente ⇒ bloqueia
+const providers = new Map();                                 // integrações reais registradas (nenhuma inventada)
+const parsePrefixes = (raw) => String(raw || "").split(",").map((p) => p.trim()).filter(Boolean);
+
+function createPaymentGateway({ settings, logger }) {
+  const provider = String(settings.paymentProvider || "").trim();   // sem valor padrão "mock"
+  if (provider === "mock") {
+    if (!MOCK_ALLOWED_ENVS.has(settings.appEnv)) {
+      throw new Error("PAYMENT_PROVIDER=mock só é permitido com APP_ENV=test ou development");
+    }
+    return createMockGateway({ approvedPrefixes: parsePrefixes(settings.paymentMockApprovedPrefixes), logger });
+  }
+  if (providers.has(provider)) return providers.get(provider)({ apiKey: settings.paymentApiKey, logger }); // integração real
+  return createUnavailableGateway({ logger });                 // vazio ou desconhecido ⇒ recusa
+}
+const createUnavailableGateway = ({ logger }) => ({
+  async charge() {
+    logger.warn("pagamento recusado: nenhum provedor de pagamento configurado");
+    return { status: "DENIED", reason: "provider_not_configured" };
+  },
+});
+const createMockGateway = ({ approvedPrefixes, logger }) => ({
+  async charge({ cardNumber, amountCents }) {
+    const approved = approvedPrefixes.some((p) => cardNumber.startsWith(p));
+    logger.info("pagamento MOCK (ambiente de teste)", { last4: cardNumber.slice(-4), amountCents, approved });
+    return { status: approved ? "PAID" : "DENIED", reason: approved ? null : "mock_denied" };
+  },
+});
+```
+**Depois (Python)**
+```python
+# services/payment/gateway_factory.py
+MOCK_ALLOWED_ENVS = {"test", "development"}          # lista branca; ambiente ausente ⇒ bloqueia
+PROVIDERS = {}                                        # integrações reais registradas (nenhuma inventada)
+
+def parse_prefixes(raw):
+    return [p.strip() for p in (raw or "").split(",") if p.strip()]
+
+def create_payment_gateway(settings, logger):
+    provider = (settings.PAYMENT_PROVIDER or "").strip()          # sem valor padrão "mock"
+    if provider == "mock":
+        if settings.APP_ENV not in MOCK_ALLOWED_ENVS:
+            raise RuntimeError("PAYMENT_PROVIDER=mock só é permitido com APP_ENV=test ou development")
+        return MockGateway(parse_prefixes(settings.PAYMENT_MOCK_APPROVED_PREFIXES), logger)
+    if provider in PROVIDERS:
+        return PROVIDERS[provider](settings.PAYMENT_API_KEY, logger)    # integração real
+    return UnavailableGateway(logger)                                    # vazio ou desconhecido ⇒ recusa
+```
+**Configuração** (`.env.example`, valores fictícios): `PAYMENT_PROVIDER=` (vazio = recusa; **nunca** `mock` como exemplo padrão) · `PAYMENT_MOCK_APPROVED_PREFIXES=` (só com `PAYMENT_PROVIDER=mock`) · `APP_ENV` (`test`/`development` liberam o mock; qualquer outro valor ou ausente bloqueia).
+
+**Passos:**
+1. Extraia a decisão para um gateway injetável (P-09); até o composition root existir (P-13, mais adiante na ordem canônica), passe o gateway por parâmetro ao service; depois, ele é criado no composition root.
+2. Crie a seleção por configuração com recusa por padrão (vazio ou desconhecido ⇒ recusa) e a lista branca de ambientes do mock.
+3. O mock reproduz a regra de teste que o projeto já usa (ex.: prefixos aprovados vindos da configuração), **somente** quando `PAYMENT_PROVIDER=mock` e `APP_ENV` está na lista branca. Assim os testes de caracterização continuam válidos com ajuste de ambiente T1 (variáveis no processo da aplicação de teste), sem mudar asserções.
+4. Integração real: deixe só o ponto de extensão (`providers`) e a recomendação manual. **Nunca** invente SDK, chave, endpoint ou contrato de provedor.
+5. O checkout decide o pagamento **antes** de gravar e nunca grava aprovado sem retorno aprovado do gateway (P-10 para atomicidade).
+6. Registre no relatório: SEC-14 corrigido (a aprovação deixou de ser heurística fora do mock), variáveis novas e a recomendação de integrar um provedor real.
+
+**Provas exigidas (todas as opções, `06` seção 8.9):**
+```js
+// unidade (runner do projeto, sem dependência nova)
+test("sem provedor configurado, qualquer cartão é recusado", async () => {
+  const gw = createPaymentGateway({ settings: { paymentProvider: "" }, logger });
+  assert.equal((await gw.charge({ cardNumber: "4111111111111111", amountCents: 100 })).status, "DENIED");
+});
+test("mock é bloqueado fora da lista branca (produção e ambiente ausente)", () => {
+  assert.throws(() => createPaymentGateway({ settings: { paymentProvider: "mock", appEnv: "production" }, logger }));
+  assert.throws(() => createPaymentGateway({ settings: { paymentProvider: "mock" }, logger }));
+});
+test("provedor desconhecido é recusado", async () => {
+  const gw = createPaymentGateway({ settings: { paymentProvider: "constructor" }, logger });
+  assert.equal((await gw.charge({ cardNumber: "4111111111111111", amountCents: 100 })).status, "DENIED");
+});
+test("mock aprova só os prefixos configurados; lista vazia não aprova nada", async () => {
+  const gw = createPaymentGateway({ settings: { paymentProvider: "mock", appEnv: "test", paymentMockApprovedPrefixes: "4" }, logger });
+  assert.equal((await gw.charge({ cardNumber: "5111111111111111", amountCents: 100 })).status, "DENIED");
+  const vazio = createPaymentGateway({ settings: { paymentProvider: "mock", appEnv: "test", paymentMockApprovedPrefixes: "" }, logger });
+  assert.equal((await vazio.charge({ cardNumber: "4111111111111111", amountCents: 100 })).status, "DENIED");
+});
+// integração: subir a aplicação SEM provedor e fazer checkout com o cartão que o original aprovava
+//   ⇒ resposta de recusa existente e nada gravado (vermelho no checkpoint original, que aprova)
+```
+Complemente com a execução local autenticada (`06`, seção 5.1) usando `PAYMENT_PROVIDER=mock`.
+**Validar:** busca pela heurística de aprovação no código de produção (fora do mock) = vazio; testes originais verdes com o ambiente de teste; teste de recusa sem provedor verde no refatorado e vermelho no original.

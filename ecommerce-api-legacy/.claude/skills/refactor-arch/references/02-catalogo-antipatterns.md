@@ -157,10 +157,10 @@ Cada entrada tem: **Sinal** (descrição abstrata, vale para qualquer linguagem)
 - **Categoria:** Segurança · CWE-602 / CWE-840 · OWASP A04:2021
 - **Sinal:** aprovação de pagamento decidida por heurística trivial (prefixo do cartão, flag enviada pelo cliente); total/preço aceito do cliente em vez de calculado no servidor; ausência de integração real tratada como se fosse produção.
 - **Dicas:** `status = card.startswith("4") ? "PAID" : "DENIED"`, `total = body.total`.
-- **NÃO é finding:** stub explicitamente isolado em ambiente de teste, sem caminho para produção.
+- **NÃO é finding:** provedor mock ativado **só** por configuração explícita, bloqueado em produção, com **recusa por padrão** quando nenhum provedor está configurado (padrão P-20). Um adapter "simulado" isolado que continua aprovando por heurística em qualquer ambiente **continua sendo finding**.
 - **Confirmar:** o resultado da "aprovação" libera um bem ou acesso.
 - **Severidade:** CRITICAL (libera bem sem cobrança real); HIGH (preço/total vindo do cliente).
-- **Correção:** P-09, P-07
+- **Correção:** P-20 (aprovação), P-09 (preço/total no servidor), P-07
 
 ### SEC-15 · Fluxo crítico sem transação / condição de corrida — HIGH
 - **Categoria:** Segurança/Integridade · CWE-362 / CWE-367 · OWASP A04:2021
@@ -303,4 +303,4 @@ Se encontrar problema real de segurança, arquitetura ou qualidade que não cabe
 
 ## 7. Distribuição esperada e checagem final da Fase 2
 
-Antes de fechar o relatório confirme: (a) varreu todas as categorias SEC, ARC, DEP, TST, QLT; (b) o resultado separa Segurança de Arquitetura; (c) APIs deprecated foram **procuradas** (se nenhuma, escreva "DEP: nenhuma encontrada para <versões declaradas>"); (d) ≥ 5 findings (ver `03-template-relatorio.md`); (e) pelo menos um CRITICAL/HIGH, ou justificativa expressa; (f) cada finding tem arquivo:linha relido.
+Antes de fechar o relatório confirme: (a) varreu todas as categorias SEC, ARC, DEP, TST, QLT; (b) o resultado separa Segurança de Arquitetura; (c) APIs deprecated foram **procuradas** (se nenhuma, escreva "DEP: nenhuma encontrada para <versões declaradas>"); (d) ≥ 5 findings (ver `03-template-relatorio.md`); (e) pelo menos um CRITICAL/HIGH, ou justificativa expressa; (f) cada finding tem arquivo:linha relido; (g) **todo CRITICAL/HIGH tem correção prevista** no "Plano de mudanças" (`C-xx`), marcada como compatível ou `CT-xx` — é a base do "Resumo para a pergunta" (quantos ficariam sem correção em Manter contrato\*); recomendação manual sem `C-xx` só para ação externa ao código (ex.: rotacionar segredo publicado).

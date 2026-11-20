@@ -1,25 +1,21 @@
-// Logger em JSON por linha, com nível mínimo configurável.
-// Nunca registre cartão completo, senha, token ou chave: passe apenas identificadores ou valores mascarados.
-const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
+// Logger mínimo com níveis, em linhas JSON (P-15). Nunca receba cartão, senha, token ou chave.
+const LEVELS = Object.freeze({ debug: 10, info: 20, warn: 30, error: 40 });
 
-function createLogger(level = 'info') {
-    const minimo = LEVELS[level] ?? LEVELS.info;
-
-    const write = (nivel, msg, meta = {}) => {
-        if (LEVELS[nivel] < minimo) return;
-        const linha = JSON.stringify({ time: new Date().toISOString(), level: nivel, msg, ...meta });
-        if (LEVELS[nivel] >= LEVELS.warn) process.stderr.write(`${linha}\n`);
-        else process.stdout.write(`${linha}\n`);
+function createLogger(level = 'info', stream = process.stdout) {
+    const threshold = LEVELS[level] || LEVELS.info;
+    const write = (lvl, msg, fields = {}) => {
+        if (LEVELS[lvl] < threshold) return;
+        stream.write(`${JSON.stringify({ time: new Date().toISOString(), level: lvl, msg, ...fields })}\n`);
     };
-
     return {
-        debug: (msg, meta) => write('debug', msg, meta),
-        info: (msg, meta) => write('info', msg, meta),
-        warn: (msg, meta) => write('warn', msg, meta),
-        error: (msg, meta) => write('error', msg, meta),
+        debug: (msg, fields) => write('debug', msg, fields),
+        info: (msg, fields) => write('info', msg, fields),
+        warn: (msg, fields) => write('warn', msg, fields),
+        error: (msg, fields) => write('error', msg, fields),
     };
 }
 
-const maskCard = (cardNumber) => `***${String(cardNumber).slice(-4)}`;
+// Mantém apenas os 4 últimos dígitos do cartão.
+const cardLast4 = (cardNumber) => String(cardNumber).slice(-4);
 
-module.exports = { createLogger, maskCard };
+module.exports = { createLogger, cardLast4 };

@@ -1,54 +1,44 @@
-const { PAYMENT_STATUS } = require('../config/constants');
-const { AppError } = require('../utils/appError');
+const crypto = require('node:crypto');
+const { MESSAGES, PAYMENT_STATUS } = require('../config/constants');
+const { AppError } = require('../errors/AppError');
+const { cardLast4 } = require('../utils/logger');
 
-function createCheckoutService({
-    db, userModel, courseModel, enrollmentModel, paymentModel, auditLogModel, paymentGateway, passwordService, logger,
-}) {
-    // Executa um passo de persistência; falha vira erro HTTP com a mensagem original da API.
-    const step = async (mensagem, fn) => {
-        try {
-            return await fn();
-        } catch (err) {
-            logger.error(`checkout: ${mensagem}`, { error: err.message });
-            throw new AppError(500, mensagem);
-        }
-    };
+function createCheckoutService({ db, userModel, courseModel, enrollmentModel, paymentModel, auditLogModel, paymentGateway, passwordService, logger }) {
+    // E-mail já cadastrado exige a senha da conta antes de qualquer cobrança ou escrita (CT-03).
+    async function assertAccountOwner(user, password) {
+        const valid = await passwordService.verify(password, user.pass);
+        if (!valid) throw new AppError(MESSAGES.INVALID_CREDENTIALS, 401);
+    }
 
-    async function findCourse(courseId) {
-        try {
-            return await courseModel.findActiveById(courseId);
-        } catch (err) {
-            // Contrato preservado: erro de banco na busca do curso responde 404 (F-019, residual).
-            logger.error('checkout: falha ao buscar curso', { error: err.message });
-            return null;
-        }
+    // Sem senha informada, a conta nasce com senha aleatória não divulgada (não há senha padrão).
+    function hashNewUserPassword(password) {
+        return passwordService.hash(password || crypto.randomBytes(24).toString('base64url'));
     }
 
     async function checkout({ name, email, password, courseId, cardNumber }) {
-        const course = await findCourse(courseId);
-        if (!course) throw new AppError(404, 'Curso não encontrado');
+        const course = await courseModel.findActiveById(courseId);
+        if (!course) throw new AppError(MESSAGES.COURSE_NOT_FOUND, 404);
 
-        const existingUserId = await step('Erro DB', () => userModel.findIdByEmail(email));
+        const existingUser = await userModel.findByEmail(email);
+        if (existingUser) await assertAccountOwner(existingUser, password);
 
-        // O pagamento é decidido antes de qualquer gravação.
-        const status = await paymentGateway.charge({ cardNumber, amountCents: course.priceCents });
-        if (status === PAYMENT_STATUS.DENIED) throw new AppError(400, 'Pagamento recusado');
+        const charge = await paymentGateway.charge({ cardNumber, amountCents: course.priceCents });
+        if (charge.status !== PAYMENT_STATUS.PAID) throw new AppError(MESSAGES.PAYMENT_DENIED, 400);
 
-        const passwordHash = existingUserId
-            ? null
-            : await passwordService.hashPassword(password || passwordService.generateRandomPassword());
+        const newUserHash = existingUser ? null : await hashNewUserPassword(password);
 
-        const result = await db.transaction(async () => {
-            const userId = existingUserId
-                ?? await step('Erro ao criar usuário', () => userModel.create({ name, email, passwordHash }));
-            const enrollmentId = await step('Erro Matrícula', () => enrollmentModel.create({ userId, courseId: course.id }));
-            await step('Erro Pagamento', () => paymentModel.create({ enrollmentId, amountCents: course.priceCents, status }));
-            await step('Erro Auditoria', () => auditLogModel.create(`Checkout curso ${course.id} por ${userId}`));
-            return { userId, enrollmentId };
+        const { userId, enrollmentId } = await db.transaction(async () => {
+            const buyerId = existingUser
+                ? existingUser.id
+                : await userModel.create({ name, email, passHash: newUserHash });
+            const newEnrollmentId = await enrollmentModel.create({ userId: buyerId, courseId: course.id });
+            await paymentModel.create({ enrollmentId: newEnrollmentId, amountCents: course.priceCents, status: charge.status });
+            await auditLogModel.create(`Checkout curso ${course.id} por ${buyerId}`);
+            return { userId: buyerId, enrollmentId: newEnrollmentId };
         });
 
-        logger.info('checkout concluído', { userId: result.userId, courseId: course.id, enrollmentId: result.enrollmentId });
-        return result.enrollmentId;
+        logger.info('checkout concluído', { userId, courseId: course.id, enrollmentId, last4: cardLast4(cardNumber) });
+        return { enrollmentId };
     }
 
     return { checkout };

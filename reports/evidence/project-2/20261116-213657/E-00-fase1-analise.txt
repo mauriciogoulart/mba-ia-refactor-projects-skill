@@ -1,0 +1,60 @@
+E-00 · Fase 1 — Análise do projeto (somente leitura)
+Run: 2026-11-16T21:36:57-03:00   Run id: 20261116-213657
+Projeto: ecommerce-api-legacy (Path: ecommerce-api-legacy)
+
+================================
+PHASE 1: PROJECT ANALYSIS
+================================
+Language:      JavaScript (Node.js; runtime local v24.11.1 — projeto sem `engines`/`.nvmrc`)
+Framework:     Express 4.22.1 (package.json `^4.18.2`; lockfile 4.22.1) (confiança: alta)
+Dependencies:  express ^4.18.2 (web), sqlite3 ^5.1.6 (banco, lockfile 5.1.7); testes com node:test nativo (sem dependência)
+Domain:        API de LMS com checkout (usuários, cursos, matrículas, pagamentos) e relatório financeiro administrativo
+Architecture:  monolito-sem-camadas — a classe AppManager concentra conexão, schema, seed, rotas, regra de negócio e acesso a dados
+Source files:  3 files analyzed (~180 lines)
+DB tables:     users, courses, enrollments, payments, audit_logs (SQLite em memória, recriado a cada boot)
+Entry point:   src/app.js — `npm start` (node src/app.js), porta 3000
+Routes found:  3 (2 administrativas/destrutivas)
+Validation:    tests: unit=não integration=sim e2e=não | run-docs=sim | scripts=sim | api-collection=sim
+================================
+
+## Arquivos-fonte contados (método: `wc -l`, Git Bash; ignorados node_modules, package-lock.json, .claude/)
+- src/app.js          14
+- src/AppManager.js  141
+- src/utils.js        25
+Total: 3 arquivos, 180 linhas. Maior arquivo: src/AppManager.js (141).
+Fora da contagem (teste): test/api.test.js 127 linhas. Outros: package.json (13), README.md (14), api.http (31).
+
+## Papéis por arquivo
+- src/app.js: entrypoint/composition root (express(), express.json(), new AppManager(), app.listen)
+- src/AppManager.js: infraestrutura (new sqlite3.Database), schema + seed, rotas, controllers, regra de negócio (pagamento), acesso a dados, log/cache
+- src/utils.js: config (literais, incl. segredos), estado global mutável (globalCache, totalRevenue), "hash" de senha, log
+Rótulo: monolito-sem-camadas. Arquivos com 3+ papéis: src/AppManager.js, src/utils.js.
+Não usados: totalRevenue (utils.js:10, importado em AppManager.js:2 e nunca usado); config.dbUser, config.dbPass, config.smtpUser (utils.js:2-3,5); export globalCache (utils.js:25).
+
+## Rotas
+| Método | Rota | Handler | Autenticação | Administrativa/destrutiva |
+| POST   | /api/checkout | src/AppManager.js:28 | não | não |
+| GET    | /api/admin/financial-report | src/AppManager.js:80 | não | sim |
+| DELETE | /api/users/:id | src/AppManager.js:131 | não | sim |
+Entradas: body (usr, eml, pwd, c_id, card), params (id). Middleware: só express.json() (src/app.js:6).
+Segredos: src/utils.js:3 (dbPass `senh***`), src/utils.js:4 (paymentGatewayKey `pk_l***`); senha de seed literal em src/AppManager.js:18 (`***`).
+Integrações: pagamento simulado por heurística de prefixo do cartão (src/AppManager.js:46); nenhum provedor real.
+Autenticação: inexistente; usuários criados via checkout público; seed versionado (Leonan).
+
+## Inventário de validação
+- Testes: test/api.test.js — runner node:test (`node --test`), 8 testes, integração caixa-preta via HTTP (spawn de `node src/app.js` na porta 3000 + fetch).
+- Instruções: README.md:5-12 (npm install, npm start, porta 3000); package.json:7-8 (start, test).
+- Scripts: package.json#scripts start (`node src/app.js`), test (`node --test`). Sem Makefile, sem CI.
+- Coleção: api.http (4 requisições: 2 checkout, GET admin/financial-report, DELETE /api/users/1).
+- UI/screenshot: não se aplica (API pura).
+- Credenciais de teste: não há login; dados de seed literais; cadastro implícito via POST /api/checkout.
+
+## Comandos descobertos
+| Necessidade | Comando | Origem | Classe |
+| Instalar | npm install | README.md:8 | C (node_modules já existe; não necessário) |
+| Subir | npm start (node src/app.js) | README.md:9; package.json:7 | B (banco em memória) |
+| Testes | npm test (node --test) | package.json:8 | B |
+| Checagem | node --check <arquivo> | toolchain | B |
+| Porta/URL | 3000 / http://localhost:3000 | src/utils.js:6; api.http:1; README.md:12 | — |
+| Saúde | não há rota de saúde; os testes usam GET /api/admin/financial-report como prontidão | test/api.test.js:34 | — |
+SO/shell: Windows 11, Git Bash e PowerShell.

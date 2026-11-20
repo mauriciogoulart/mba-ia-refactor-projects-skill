@@ -1,11 +1,13 @@
-// Cabeçalhos de segurança básicos para uma API JSON (aditivos; não alteram o corpo das respostas).
+const SECURITY_HEADERS = Object.freeze({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'no-referrer',
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+    'Cross-Origin-Resource-Policy': 'same-origin',
+});
+
 function securityHeaders(req, res, next) {
-    res.set({
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'DENY',
-        'Referrer-Policy': 'no-referrer',
-        'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
-    });
+    res.set(SECURITY_HEADERS);
     next();
 }
 

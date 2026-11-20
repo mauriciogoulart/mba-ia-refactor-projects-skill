@@ -1,0 +1,1 @@
+MAX_SQL_INTEGER = 2 ** 63 - 1

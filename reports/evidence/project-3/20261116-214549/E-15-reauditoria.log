@@ -1,0 +1,86 @@
+Comando:    D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe -B C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\reauditoria.py
+Diretório:  C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3
+Origem:     Passo R · catálogo 02 · Classe B
+Início/Fim: 2026-11-18T20:02:42-03:00 → 2026-11-18T20:02:44-03:00 (duração 2.0s)
+Exit code:  0
+------------------------------------------------------------
+Arquivos-fonte: 45; linhas: 1550
+
+[SEC-02 segredo literal] 0 ocorrência(s)
+
+
+[SEC-05 debug fixo/bind público] 0 ocorrência(s)
+
+
+[SEC-06 hash fraco] 1 ocorrência(s)
+  models\user.py:31: legado = hashlib.md5(pwd.encode(), usedforsecurity=False).hexdigest()
+
+[SEC-07 password serializado] 1 ocorrência(s)
+  validators\user_validator.py:43: return {**fields, 'password': password, 'role': data.get('role', ROLE_USER)}
+
+[SEC-08/QLT-04 print] 4 ocorrência(s)
+  seed.py:106: print("Seed concluído com sucesso!")
+  seed.py:107: print(f"  {User.query.count()} usuários")
+  seed.py:108: print(f"  {Category.query.count()} categorias")
+  seed.py:109: print(f"  {Task.query.count()} tasks")
+
+[SEC-09 token falso / CORS aberto] 0 ocorrência(s)
+
+
+[SEC-13 str(e) na resposta] 0 ocorrência(s)
+
+
+[ARC-09 except genérico] 0 ocorrência(s)
+
+
+[DEP-01 utcnow] 0 ocorrência(s)
+
+
+[DEP-02 Query.get] 0 ocorrência(s)
+
+
+[QLT-05 type()==] 0 ocorrência(s)
+
+
+[QLT-03 imports sem uso]
+  total: 0
+
+[SQL/ORM fora de models]
+  database.py:12: return db.session.get(model, entity_id)
+  services\persistence.py:14: db.session.commit()
+  services\persistence.py:16: db.session.rollback()
+  services\persistence.py:22: db.session.add(entity)
+  services\persistence.py:28: db.session.delete(entity)
+
+[SEC-11 matriz de acesso: usuário comum A contra dados do usuário B, em todas as rotas]
+  ok    GET /tasks/1 negado -> 403
+  ok    PUT /tasks/1 negado -> 403
+  ok    DELETE /tasks/1 negado -> 403
+  ok    GET /users negado -> 403
+  ok    GET /users/1 negado -> 403
+  ok    GET /users/1/tasks negado -> 403
+  ok    PUT /users/1 negado -> 403
+  ok    DELETE /users/1 negado -> 403
+  ok    GET /reports/summary negado -> 403
+  ok    GET /reports/user/1 negado -> 403
+  ok    DELETE /categories/1 negado -> 403
+  ok    POST /tasks negado -> 403
+  ok    GET /tasks sem tasks de B -> 200
+  ok    GET /tasks/search?user_id=B vazio -> 200
+  ok    GET /tasks/search?q=Sigilosa vazio -> 200
+  ok    GET /tasks/stats total 0 -> 200
+  ok    GET /categories task_count 0 -> 200
+  ok    gestão vê a task de B -> 200
+  ok    gestão conta a task de B -> 200
+  falhas na matriz: 0
+
+[Pontos observados, declarados como residuais]
+  ok    POST /categories por usuário comum (permitido) -> 201
+  ok    PUT /categories por usuário comum (permitido) -> 200
+  ok    POST /users com e-mail já cadastrado revela a conta (409) -> 409
+  ok    e-mail com caixa diferente cria outra conta -> 201
+  ok    token antigo após troca de senha -> 200
+2026-11-18 20:02:43,497 INFO services.user_service: Usuário criado user_id=3
+2026-11-18 20:02:43,753 INFO services.category_service: Categoria criada category_id=2
+2026-11-18 20:02:43,866 INFO services.user_service: Usuário criado user_id=4
+2026-11-18 20:02:43,978 INFO services.user_service: Usuário atualizado user_id=3

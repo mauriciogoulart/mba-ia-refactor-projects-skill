@@ -1,0 +1,18 @@
+Comando:    D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\v4_bateria.py final C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\final\app D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\reports\evidence\project-3\20261116-214549\E-13-final-execucao-local-requisicoes.log C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\final.json
+Diretório:  C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3
+Origem:     K-07 · 06 §5.1 · Classe B em banco descartável
+Início/Fim: 2026-11-18T20:02:35-03:00 → 2026-11-18T20:02:41-03:00 (duração 6.4s)
+Exit code:  0
+------------------------------------------------------------
+150 requisições; banco descartável: C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\final\app\instance\tasks.db
+       token admin (mascarado): eyJ1***; campo password na resposta: False
+       GET /users/1: campo password presente = False
+       POST /users: campo password presente = False
+       F-016: category_id da task após remover a categoria = None
+       GET /tasks?limit=2 devolveu 2 itens
+       Access-Control-Allow-Origin = None; X-Content-Type-Options = 'nosniff'
+       GET /tasks (usuário comum): tasks de terceiros na resposta = 0
+       GET /tasks (gerente): tasks de terceiros na resposta = 12
+       GET /tasks/search?user_id=<outro> (usuário comum): 0 itens
+       GET /tasks/search?q=<termo alheio> (usuário comum): 0 itens
+       GET /tasks/stats: total usuário comum = 5; total gerente = 17

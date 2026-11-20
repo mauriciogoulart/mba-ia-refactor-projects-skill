@@ -1,0 +1,61 @@
+Comando:    D:\work\workspace-ia-python\mba-ia-refactor-projects-skill\task-manager-api\.venv\Scripts\python.exe -B C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3\reauditoria.py
+Diretório:  C:\Users\maury\AppData\Local\Temp\claude\5e8788bb76161e32\b6ba369c-f235-496e-bc99-b1782d5fead4\scratchpad\exec-p3
+Origem:     Passo R · catálogo 02 · Classe B · automática
+Início/Fim: 2026-11-18T19:39:22-03:00 → 2026-11-18T19:39:24-03:00 (duração 1.7s)
+Exit code:  0
+------------------------------------------------------------
+Arquivos-fonte: 44; linhas: 1486
+
+[SEC-02 segredo literal] 0 ocorrência(s)
+
+
+[SEC-05 debug fixo/bind público] 0 ocorrência(s)
+
+
+[SEC-06 hash fraco] 1 ocorrência(s)
+  models\user.py:31: legado = hashlib.md5(pwd.encode(), usedforsecurity=False).hexdigest()
+
+[SEC-07 password serializado] 1 ocorrência(s)
+  validators\user_validator.py:43: return {**fields, 'password': password, 'role': data.get('role', ROLE_USER)}
+
+[SEC-08/QLT-04 print] 4 ocorrência(s)
+  seed.py:106: print("Seed concluído com sucesso!")
+  seed.py:107: print(f"  {User.query.count()} usuários")
+  seed.py:108: print(f"  {Category.query.count()} categorias")
+  seed.py:109: print(f"  {Task.query.count()} tasks")
+
+[SEC-09 token falso / CORS aberto] 0 ocorrência(s)
+
+
+[SEC-13 str(e) na resposta] 0 ocorrência(s)
+
+
+[ARC-09 except genérico] 0 ocorrência(s)
+
+
+[DEP-01 utcnow] 0 ocorrência(s)
+
+
+[DEP-02 Query.get] 0 ocorrência(s)
+
+
+[QLT-05 type()==] 0 ocorrência(s)
+
+
+[QLT-03 imports sem uso]
+  total: 0
+
+[SQL/ORM fora de models (.query, db.session) — esperado só em services/persistence.py]
+  services\persistence.py:14: db.session.commit()
+  services\persistence.py:16: db.session.rollback()
+  services\persistence.py:22: db.session.add(entity)
+  services\persistence.py:28: db.session.delete(entity)
+
+[SEC-11 prova em banco em memória: usuário recém-cadastrado contra dados de terceiros]
+  GET    /users               cadastro público (role=user) -> 403
+  GET    /users/1             cadastro público (role=user) -> 403
+  GET    /users/1/tasks       cadastro público (role=user) -> 403
+  GET    /reports/user/1      cadastro público (role=user) -> 403
+  PUT    /tasks/1             cadastro público (role=user) -> 403
+  DELETE /tasks/2             cadastro público (role=user) -> 403
+2026-11-18 19:39:24,365 INFO services.user_service: Usuário criado user_id=2

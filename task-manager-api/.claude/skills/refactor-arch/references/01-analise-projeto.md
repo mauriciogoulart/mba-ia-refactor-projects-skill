@@ -71,7 +71,8 @@ Registre: arquivos com 3+ papéis, camadas ausentes, serviços/utilitários **n�
 2. **Entradas de dados do usuário**: body, query, params, headers, upload.
 3. **Saídas sensíveis**: respostas que serializam usuários, pedidos, configuração, saúde.
 4. **Segredos e configuração**: onde estão, de onde são lidos.
-5. **Integrações externas**: pagamento, e-mail, filas.
+5. **Integrações externas**: pagamento, e-mail, filas — e como a decisão é tomada (provedor real configurado, simulação, heurística).
+6. **Autenticação e dados de teste**: mecanismo de identidade existente (login, token, sessão, chave), de onde vêm as credenciais de seed (literal no código, variável de ambiente, inexistente) e se há cadastro público — insumo da execução local autenticada (`06-protocolo-validacao.md`, seção 5.1).
 Conte as rotas para `Routes found`.
 
 ## 8. Inventário de validação (como provar que continua funcionando)
@@ -86,6 +87,7 @@ Descubra — **sem executar nada** — o que o projeto já oferece. Preencha a t
 | Scripts auxiliares | `scripts/`, targets do Makefile, `npm run *`, `tox`/`nox`, shell/PowerShell versionados | nome, conteúdo lido, classe (A–D) |
 | Coleções de requisição | `*.http`, `*.rest`, Postman/Insomnia/Bruno, OpenAPI/Swagger, exemplos `curl` no README | arquivo, nº de rotas cobertas |
 | Testes de UI / screenshot | `playwright.config.*`, `cypress.config.*`, Puppeteer, diretório de snapshots | existe? comando |
+| Credenciais de teste | seed, fixtures de teste, `.env.example`, endpoints de login/cadastro | como gerar credencial de teste sem dados reais (para a execução local autenticada) |
 
 Ausência de cada item é informação: vira finding (`TST-01`, `TST-02`) e entra no plano de validação como "não disponível".
 

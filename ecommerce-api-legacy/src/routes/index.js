@@ -1,15 +1,9 @@
-const express = require('express');
-const { asyncHandler } = require('../middlewares/errorHandler');
-const { validateCheckout } = require('../middlewares/validateCheckout');
+const { asyncHandler } = require('../utils/asyncHandler');
 
-function createRouter({ checkoutController, reportController, userController, checkoutRateLimiter }) {
-    const router = express.Router();
-
-    router.post('/api/checkout', checkoutRateLimiter, validateCheckout, asyncHandler(checkoutController.checkout));
-    router.get('/api/admin/financial-report', asyncHandler(reportController.financialReport));
-    router.delete('/api/users/:id', asyncHandler(userController.remove));
-
-    return router;
+function registerRoutes(app, { checkoutController, reportController, userController, requireAdmin, checkoutRateLimiter }) {
+    app.post('/api/checkout', checkoutRateLimiter, asyncHandler(checkoutController.checkout));
+    app.get('/api/admin/financial-report', requireAdmin, asyncHandler(reportController.financialReport));
+    app.delete('/api/users/:id', requireAdmin, asyncHandler(userController.remove));
 }
 
-module.exports = { createRouter };
+module.exports = { registerRoutes };

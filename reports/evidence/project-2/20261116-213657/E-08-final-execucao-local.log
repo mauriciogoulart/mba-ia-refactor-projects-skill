@@ -1,0 +1,40 @@
+### E-08 · V4 execução local autenticada (após refatoração)
+Comando:      node TMP/v4-execucao-local.js ecommerce-api-legacy final
+Diretório:    ecommerce-api-legacy
+Origem:       K-05 · política 07 §5 / 06 §5.1 · Classe B (banco em memória desta execução) · Autorização: P4 = Sim, incluindo escrita
+Início/Fim:   2026-11-18T19:30:09-03:00 → 2026-11-18T19:30:11-03:00 (duração 2 s)        Exit code: 0
+Ambiente:     Node v24.11.1, npm 11.6.4, express 4.22.1, sqlite3 5.1.7, Windows 11; SQLite em memória; porta 3000; credenciais aleatórias por execução
+Resultado:    mesma bateria de E-04; comparar linha a linha
+Saída capturada (segredos mascarados):
+modo=final | banco: SQLite em memória (descartável, recriado no boot) | porta 3000
+credenciais geradas nesta execução: ADMIN_API_KEY=JznS*** SEED_USER_PASSWORD=C1dr*** PAYMENT_GATEWAY_KEY=test*** | senha usada para o usuário de seed: C1dr***
+ambiente: APP_ENV=test PAYMENT_PROVIDER=mock PAYMENT_MOCK_APPROVED_PREFIXES=4
+[parte A] boot: ok
+01 | GET /api/admin/financial-report | cred=sem | status 401 | texto "Não autorizado" | x-powered-by=- nosniff=nosniff | 64ms
+02 | GET /api/admin/financial-report | cred=inválida | status 401 | texto "Não autorizado" | x-powered-by=- nosniff=nosniff | 4ms
+03 | GET /api/admin/financial-report | cred=admin | status 200 | array[2] [{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]},{"course":"Docker","revenue":0,"students":[]}] | x-powered-by=- nosniff=nosniff | 3ms
+04 | POST /api/checkout | cred=sem | status 400 | texto "Bad Request" | x-powered-by=- nosniff=nosniff | 18ms
+05 | POST /api/checkout | cred=sem | status 404 | texto "Curso não encontrado" | x-powered-by=- nosniff=nosniff | 3ms
+06 | POST /api/checkout | cred=sem | status 400 | texto "Pagamento recusado" | x-powered-by=- nosniff=nosniff | 3ms
+07 | POST /api/checkout | cred=sem | status 200 | {msg,enrollment_id} | x-powered-by=- nosniff=nosniff | 37ms
+08 | POST /api/checkout | cred=senha correta (seed) | status 200 | {msg,enrollment_id} | x-powered-by=- nosniff=nosniff | 35ms
+09 | POST /api/checkout | cred=senha errada | status 401 | texto "Credenciais inválidas" | x-powered-by=- nosniff=nosniff | 35ms
+10 | POST /api/checkout | cred=sem senha | status 401 | texto "Credenciais inválidas" | x-powered-by=- nosniff=nosniff | 35ms
+11 | GET /api/admin/financial-report | cred=admin | status 200 | array[2] [{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]},{"course":"Docker","revenue":994,"students":[{"student":"Sintetico","paid":497},{"student":"Leonan","paid":497}]}] | x-powered-by=- nosniff=nosniff | 2ms
+12 | POST /api/checkout | cred=sem | status 400 | texto "Bad Request" | x-powered-by=- nosniff=nosniff | 1ms
+13 | DELETE /api/users/999 | cred=sem | status 401 | texto "Não autorizado" | x-powered-by=- nosniff=nosniff | 0ms
+14 | DELETE /api/users/1 | cred=inválida | status 401 | texto "Não autorizado" | x-powered-by=- nosniff=nosniff | 1ms
+15 | DELETE /api/users/999 | cred=admin | status 404 | texto "Usuário não encontrado" | x-powered-by=- nosniff=nosniff | 2ms
+16 | DELETE /api/users/1 | cred=admin | status 200 | texto "Usuário deletado." | x-powered-by=- nosniff=nosniff | 1ms
+17 | GET /api/admin/financial-report | cred=admin | status 200 | array[2] [{"course":"Clean Architecture","revenue":0,"students":[]},{"course":"Docker","revenue":497,"students":[{"student":"Sintetico","paid":497}]}] | x-powered-by=- nosniff=nosniff | 2ms
+18 | POST /api/checkout | cred=sem | status 400 | texto "Bad Request" | x-powered-by=- nosniff=nosniff | 1ms
+19 | GET /api/admin/financial-report | cred=admin | status 200 | array[2] [{"course":"Clean Architecture","revenue":0,"students":[]},{"course":"Docker","revenue":497,"students":[{"student":"Sintetico","paid":497}]}] | x-powered-by=- nosniff=nosniff | 1ms
+[parte A] log contém número completo de cartão: false | log contém a chave do gateway: false | log contém senha de seed: false
+[parte A] processo vivo ao final: true
+[parte A] porta liberada após encerrar: true
+[parte A] linhas relevantes do log (mascaradas):
+    {"time":"2026-11-18T22:30:10.090Z","level":"info","msg":"LMS API rodando na porta 3000"}
+[parte B] boot sem PAYMENT_PROVIDER: ok
+20 | POST /api/checkout | cred=sem | status 400 | texto "Pagamento recusado" | x-powered-by=- nosniff=nosniff | 23ms
+21 | GET /api/admin/financial-report | cred=admin | status 200 | array[2] [{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]},{"course":"Docker","revenue":0,"students":[]}] | x-powered-by=- nosniff=nosniff | 3ms
+[parte B] porta liberada após encerrar: true

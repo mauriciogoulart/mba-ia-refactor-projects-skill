@@ -1,0 +1,15 @@
+### E-01 · Checkpoint do código original (pré-voo)
+Comando:      git branch refactor-arch/checkpoint-20261116-195523 HEAD ; git worktree add <tmp>\exec-p1\checkpoint refactor-arch/checkpoint-20261116-195523
+Diretório:    D:\work\workspace-ia-python\mba-ia-refactor-projects-skill
+Origem:       K-00 · política 07 §2.2 · Classe C · Autorização: lote aprovado (resposta 1A)
+Início/Fim:   2026-11-16T20:00:21-03:00 → 2026-11-16T20:00:22-03:00        Exit code: 0 / 0
+Ambiente:     Windows 11; Python 3.14.0 (.venv); Flask 3.1.1; flask-cors 5.0.1; pytest 9.2.0; requests 2.34.2
+Resultado:    branch criado em f77fadc; worktree removida na limpeza (K-06, exit 0); branch mantido para o usuário
+
+Saída capturada:
+exit=0
+Preparing worktree (checking out 'refactor-arch/checkpoint-20261116-195523')
+HEAD is now at f77fadc docs: atualiza controle da entrega v2 (fases 0 a 2)
+exit=0
+D:/work/.../mba-ia-refactor-projects-skill   f77fadc [entrega-v2]
+C:/.../scratchpad/exec-p1/checkpoint         f77fadc [refactor-arch/checkpoint-20261116-195523]

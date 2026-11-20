@@ -5,6 +5,7 @@ A aplicação é copiada para um diretório temporário e iniciada com
 Os testes dependem apenas do contrato HTTP, não da estrutura interna do código.
 """
 import os
+import secrets
 import shutil
 import signal
 import socket
@@ -19,9 +20,6 @@ import requests
 DIR_PROJETO = Path(__file__).resolve().parent.parent
 PORTA = 5000
 URL_BASE = f"http://127.0.0.1:{PORTA}"
-# Credenciais de seed apenas para o ambiente de teste (a aplicação as lê do ambiente).
-SENHA_ADMIN_TESTE = "admin123"
-SENHA_CLIENTE_TESTE = "cliente123"
 IGNORAR = shutil.ignore_patterns(
     "tests", ".venv", "venv", "__pycache__", "*.pyc", "*.db",
     "instance", ".pytest_cache", "node_modules",
@@ -47,13 +45,10 @@ def _encerrar(proc):
 
 
 class Cliente:
-    def __init__(self, base, token=None):
+    def __init__(self, base):
         self.base = base
-        self.token = token
 
     def _req(self, metodo, caminho, **kw):
-        if self.token:
-            kw["headers"] = {"Authorization": f"Bearer {self.token}", **kw.get("headers", {})}
         return requests.request(metodo, self.base + caminho, timeout=10, **kw)
 
     def get(self, caminho, **kw):
@@ -70,19 +65,52 @@ class Cliente:
 
 
 @pytest.fixture(scope="session")
-def servidor(tmp_path_factory):
+def credenciais():
+    """Senhas de seed aleatórias por execução, lidas pela aplicação via ambiente."""
+    return {"admin": secrets.token_urlsafe(12), "cliente": secrets.token_urlsafe(12)}
+
+
+@pytest.fixture(scope="session")
+def ambiente_app(tmp_path_factory):
+    raiz = tmp_path_factory.mktemp("app")
+    return {"raiz": raiz, "destino": raiz / "projeto", "log": raiz / "servidor.log",
+            "banco": raiz / "projeto" / "loja.db"}
+
+
+@pytest.fixture(scope="session")
+def caminho_banco(api, ambiente_app):
+    return ambiente_app["banco"]
+
+
+@pytest.fixture(scope="session")
+def log_servidor(api, ambiente_app):
+    return ambiente_app["log"]
+
+
+@pytest.fixture(scope="session")
+def admin_headers(api, credenciais):
+    """Cabeçalho Authorization do admin de seed (token emitido pelo POST /login)."""
+    r = api.post("/login", {"email": "admin@loja.com", "senha": credenciais["admin"]})
+    token = r.json().get("dados", {}).get("token", "") if r.status_code == 200 else ""
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture(scope="session")
+def api(ambiente_app, credenciais):
     if _porta_em_uso(PORTA):
         pytest.exit(f"Porta {PORTA} já está em uso; encerre o processo e rode novamente.",
                     returncode=2)
 
-    raiz = tmp_path_factory.mktemp("app")
-    destino = raiz / "projeto"
+    destino = ambiente_app["destino"]
     shutil.copytree(DIR_PROJETO, destino, ignore=IGNORAR)
 
-    caminho_log = raiz / "servidor.log"
+    caminho_log = ambiente_app["log"]
     log = caminho_log.open("w", encoding="utf-8")
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8",
-           "SEED_ADMIN_PASSWORD": SENHA_ADMIN_TESTE, "SEED_CLIENTE_PASSWORD": SENHA_CLIENTE_TESTE}
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1",
+           "SECRET_KEY": secrets.token_hex(32),
+           "SEED_ADMIN_PASSWORD": credenciais["admin"],
+           "SEED_CLIENTE_PASSWORD": credenciais["cliente"],
+           "DB_PATH": str(ambiente_app["banco"])}
     proc = subprocess.Popen(
         [sys.executable, "app.py"], cwd=destino, env=env,
         stdout=log, stderr=subprocess.STDOUT,
@@ -101,24 +129,7 @@ def servidor(tmp_path_factory):
                 time.sleep(0.3)
         else:
             pytest.exit("Timeout aguardando a aplicação subir em /health.", returncode=2)
-        yield URL_BASE
+        yield Cliente(URL_BASE)
     finally:
         _encerrar(proc)
         log.close()
-
-
-def _token(base, email, senha):
-    r = requests.post(base + "/login", json={"email": email, "senha": senha}, timeout=10)
-    return r.json().get("dados", {}).get("token") if r.status_code == 200 else None
-
-
-@pytest.fixture(scope="session")
-def api(servidor):
-    """Cliente autenticado como administrador (rotas protegidas exigem token)."""
-    return Cliente(servidor, _token(servidor, "admin@loja.com", SENHA_ADMIN_TESTE))
-
-
-@pytest.fixture(scope="session")
-def api_anonimo(servidor):
-    """Cliente sem credencial."""
-    return Cliente(servidor)

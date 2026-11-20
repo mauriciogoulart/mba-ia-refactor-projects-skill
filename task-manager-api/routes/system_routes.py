@@ -1,8 +1,15 @@
-from flask import Blueprint
+from datetime import datetime
 
-from controllers import system_controller
+from flask import Blueprint
 
 system_bp = Blueprint('system', __name__)
 
-system_bp.add_url_rule('/', view_func=system_controller.index, methods=['GET'])
-system_bp.add_url_rule('/health', view_func=system_controller.health, methods=['GET'])
+
+@system_bp.route('/health')
+def health():
+    return {'status': 'ok', 'timestamp': str(datetime.now())}
+
+
+@system_bp.route('/')
+def index():
+    return {'message': 'Task Manager API', 'version': '1.0'}

@@ -1,6 +1,6 @@
-from database import db
-from utils.constants import DEFAULT_COLOR
-from utils.helpers import utc_now
+from database import db, get_by_id
+from models.constants import DEFAULT_COLOR
+from utils.clock import utcnow
 
 
 class Category(db.Model):
@@ -10,17 +10,15 @@ class Category(db.Model):
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(300), nullable=True)
     color = db.Column(db.String(7), default=DEFAULT_COLOR)
-    created_at = db.Column(db.DateTime, default=utc_now)
-
-    # ---------- acesso a dados ----------
+    created_at = db.Column(db.DateTime, default=utcnow)
 
     @classmethod
-    def get(cls, category_id):
-        return db.session.get(cls, category_id)
+    def find(cls, category_id):
+        return get_by_id(cls, category_id)
 
     @classmethod
-    def list_all(cls):
-        return cls.query.order_by(cls.id).all()
+    def list_page(cls, limit, offset):
+        return cls.query.order_by(cls.id).limit(limit).offset(offset).all()
 
     @classmethod
     def count_all(cls):

@@ -1,26 +1,23 @@
+"""Saúde da aplicação e operações administrativas."""
 import logging
 
-from database.connection import ErroBanco
-from services.excecoes import AppError
-
-logger = logging.getLogger("app.sistema")
+logger = logging.getLogger(__name__)
 
 
 class SistemaService:
-    def __init__(self, sistema, allow_destructive):
-        self._sistema = sistema
-        self._allow_destructive = allow_destructive
+    def __init__(self, produto_model, usuario_model, pedido_model, admin_model):
+        self._produtos = produto_model
+        self._usuarios = usuario_model
+        self._pedidos = pedido_model
+        self._admin = admin_model
 
     def contagens(self):
-        """Devolve as contagens ou None se o banco estiver indisponível."""
-        try:
-            return self._sistema.contagens()
-        except ErroBanco:
-            logger.exception("Health check: falha ao acessar o banco")
-            return None
+        return {
+            "produtos": self._produtos.contar(),
+            "usuarios": self._usuarios.contar(),
+            "pedidos": self._pedidos.contar(),
+        }
 
-    def resetar_banco(self):
-        if not self._allow_destructive:
-            raise AppError("Operação desabilitada (ALLOW_DESTRUCTIVE)", 403)
-        self._sistema.resetar()
-        logger.warning("Banco de dados resetado por administrador")
+    def resetar_banco(self, admin_id):
+        self._admin.limpar_tabelas()
+        logger.warning("Banco de dados resetado pelo administrador id=%s", admin_id)

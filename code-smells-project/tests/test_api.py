@@ -11,21 +11,23 @@ def _sufixo():
     return uuid.uuid4().hex[:8]
 
 
-def _criar_produto(api, preco=10.0, estoque=5, categoria="geral"):
+def _criar_produto(api, admin_headers, preco=10.0, estoque=5, categoria="geral"):
     r = api.post("/produtos", {
         "nome": "Produto" + _sufixo(), "descricao": "teste",
         "preco": preco, "estoque": estoque, "categoria": categoria,
-    })
+    }, headers=admin_headers)
     assert r.status_code == 201, r.text
     return r.json()["dados"]["id"]
 
 
-def _criar_usuario(api):
-    r = api.post("/usuarios", {
-        "nome": "Usuario" + _sufixo(), "email": f"u{_sufixo()}@teste.com", "senha": "segredo1",
-    })
+def _criar_usuario_com_token(api):
+    """Cadastro público + login do próprio usuário (CT-05/CT-06/CT-07)."""
+    email, senha = f"u{_sufixo()}@teste.com", "segredo1"
+    r = api.post("/usuarios", {"nome": "Usuario" + _sufixo(), "email": email, "senha": senha})
     assert r.status_code == 201, r.text
-    return r.json()["dados"]["id"]
+    uid = r.json()["dados"]["id"]
+    token = api.post("/login", {"email": email, "senha": senha}).json()["dados"]["token"]
+    return uid, {"Authorization": f"Bearer {token}"}
 
 
 # ---------- raiz / health ----------
@@ -88,8 +90,8 @@ def test_busca_produtos_por_categoria_e_preco(api):
     assert all(p["categoria"] == "moveis" and p["preco"] <= 5000 for p in corpo["dados"])
 
 
-def test_crud_produto(api):
-    pid = _criar_produto(api, preco=25.5, estoque=3, categoria="livros")
+def test_crud_produto(api, admin_headers):
+    pid = _criar_produto(api, admin_headers, preco=25.5, estoque=3, categoria="livros")
 
     r = api.get(f"/produtos/{pid}")
     assert r.status_code == 200
@@ -98,23 +100,23 @@ def test_crud_produto(api):
     r = api.put(f"/produtos/{pid}", {
         "nome": "Produto Atualizado", "descricao": "novo", "preco": 30, "estoque": 7,
         "categoria": "livros",
-    })
+    }, headers=admin_headers)
     assert r.status_code == 200
     dados = api.get(f"/produtos/{pid}").json()["dados"]
     assert dados["nome"] == "Produto Atualizado"
     assert dados["estoque"] == 7
 
-    assert api.delete(f"/produtos/{pid}").status_code == 200
+    assert api.delete(f"/produtos/{pid}", headers=admin_headers).status_code == 200
     assert api.get(f"/produtos/{pid}").status_code == 404
 
 
-def test_atualizar_e_deletar_produto_inexistente(api):
+def test_atualizar_e_deletar_produto_inexistente(api, admin_headers):
     corpo = {"nome": "Algum", "preco": 1, "estoque": 1}
-    assert api.put("/produtos/999999", corpo).status_code == 404
-    assert api.delete("/produtos/999999").status_code == 404
+    assert api.put("/produtos/999999", corpo, headers=admin_headers).status_code == 404
+    assert api.delete("/produtos/999999", headers=admin_headers).status_code == 404
 
 
-def test_criar_produto_validacoes(api):
+def test_criar_produto_validacoes(api, admin_headers):
     base = {"nome": "Valido", "preco": 10, "estoque": 1, "categoria": "geral"}
     casos = [
         ({k: v for k, v in base.items() if k != "nome"}, "nome ausente"),
@@ -126,15 +128,15 @@ def test_criar_produto_validacoes(api):
         ({**base, "categoria": "inexistente"}, "categoria inválida"),
     ]
     for payload, descricao in casos:
-        r = api.post("/produtos", payload)
+        r = api.post("/produtos", payload, headers=admin_headers)
         assert r.status_code == 400, descricao
         assert "erro" in r.json(), descricao
 
 
 # ---------- usuários / login ----------
 
-def test_listar_usuarios_seed(api):
-    r = api.get("/usuarios")
+def test_listar_usuarios_seed(api, admin_headers):
+    r = api.get("/usuarios", headers=admin_headers)
     assert r.status_code == 200
     corpo = r.json()
     assert corpo["sucesso"] is True
@@ -142,16 +144,16 @@ def test_listar_usuarios_seed(api):
     assert "admin@loja.com" in emails
 
 
-def test_buscar_usuario(api):
-    r = api.get("/usuarios/1")
+def test_buscar_usuario(api, admin_headers):
+    r = api.get("/usuarios/1", headers=admin_headers)
     assert r.status_code == 200
     assert r.json()["dados"]["email"] == "admin@loja.com"
-    assert api.get("/usuarios/999999").status_code == 404
+    assert api.get("/usuarios/999999", headers=admin_headers).status_code == 404
 
 
 def test_criar_usuario(api):
-    uid = _criar_usuario(api)
-    r = api.get(f"/usuarios/{uid}")
+    uid, headers = _criar_usuario_com_token(api)
+    r = api.get(f"/usuarios/{uid}", headers=headers)
     assert r.status_code == 200
     assert r.json()["dados"]["id"] == uid
 
@@ -161,8 +163,8 @@ def test_criar_usuario_campos_obrigatorios(api):
     assert r.status_code == 400
 
 
-def test_login_sucesso(api):
-    r = api.post("/login", {"email": "admin@loja.com", "senha": "admin123"})
+def test_login_sucesso(api, credenciais):
+    r = api.post("/login", {"email": "admin@loja.com", "senha": credenciais["admin"]})
     assert r.status_code == 200
     corpo = r.json()
     assert corpo["sucesso"] is True
@@ -181,11 +183,12 @@ def test_login_campos_obrigatorios(api):
 
 # ---------- pedidos ----------
 
-def test_criar_pedido_calcula_total_e_baixa_estoque(api):
-    pid = _criar_produto(api, preco=10.0, estoque=5)
-    uid = _criar_usuario(api)
+def test_criar_pedido_calcula_total_e_baixa_estoque(api, admin_headers):
+    pid = _criar_produto(api, admin_headers, preco=10.0, estoque=5)
+    uid, headers = _criar_usuario_com_token(api)
 
-    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": pid, "quantidade": 2}]})
+    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": pid, "quantidade": 2}]},
+                 headers=headers)
     assert r.status_code == 201
     corpo = r.json()
     assert corpo["sucesso"] is True
@@ -194,51 +197,56 @@ def test_criar_pedido_calcula_total_e_baixa_estoque(api):
 
     assert api.get(f"/produtos/{pid}").json()["dados"]["estoque"] == 3
 
-    pedidos_usuario = api.get(f"/pedidos/usuario/{uid}").json()["dados"]
+    pedidos_usuario = api.get(f"/pedidos/usuario/{uid}", headers=headers).json()["dados"]
     assert any(p["id"] == pedido_id for p in pedidos_usuario)
 
-    todos = api.get("/pedidos").json()["dados"]
+    todos = api.get("/pedidos", headers=admin_headers).json()["dados"]
     assert any(p["id"] == pedido_id for p in todos)
 
 
-def test_criar_pedido_estoque_insuficiente(api):
-    pid = _criar_produto(api, estoque=1)
-    uid = _criar_usuario(api)
-    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": pid, "quantidade": 5}]})
+def test_criar_pedido_estoque_insuficiente(api, admin_headers):
+    pid = _criar_produto(api, admin_headers, estoque=1)
+    uid, headers = _criar_usuario_com_token(api)
+    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": pid, "quantidade": 5}]},
+                 headers=headers)
     assert r.status_code == 400
     assert r.json()["sucesso"] is False
     assert api.get(f"/produtos/{pid}").json()["dados"]["estoque"] == 1
 
 
 def test_criar_pedido_produto_inexistente(api):
-    uid = _criar_usuario(api)
-    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": 999999, "quantidade": 1}]})
+    uid, headers = _criar_usuario_com_token(api)
+    r = api.post("/pedidos", {"usuario_id": uid, "itens": [{"produto_id": 999999, "quantidade": 1}]},
+                 headers=headers)
     assert r.status_code == 400
 
 
-def test_criar_pedido_validacoes(api):
-    assert api.post("/pedidos", {"itens": [{"produto_id": 1, "quantidade": 1}]}).status_code == 400
-    assert api.post("/pedidos", {"usuario_id": 1, "itens": []}).status_code == 400
+def test_criar_pedido_validacoes(api, admin_headers):
+    assert api.post("/pedidos", {"itens": [{"produto_id": 1, "quantidade": 1}]},
+                    headers=admin_headers).status_code == 400
+    assert api.post("/pedidos", {"usuario_id": 1, "itens": []}, headers=admin_headers).status_code == 400
 
 
-def test_atualizar_status_pedido(api):
-    pid = _criar_produto(api, estoque=5)
-    uid = _criar_usuario(api)
+def test_atualizar_status_pedido(api, admin_headers):
+    pid = _criar_produto(api, admin_headers, estoque=5)
+    uid, headers = _criar_usuario_com_token(api)
     pedido_id = api.post("/pedidos", {
         "usuario_id": uid, "itens": [{"produto_id": pid, "quantidade": 1}],
-    }).json()["dados"]["pedido_id"]
+    }, headers=headers).json()["dados"]["pedido_id"]
 
-    assert api.put(f"/pedidos/{pedido_id}/status", {"status": "aprovado"}).status_code == 200
-    pedidos = api.get(f"/pedidos/usuario/{uid}").json()["dados"]
+    assert api.put(f"/pedidos/{pedido_id}/status", {"status": "aprovado"},
+                   headers=admin_headers).status_code == 200
+    pedidos = api.get(f"/pedidos/usuario/{uid}", headers=headers).json()["dados"]
     assert next(p for p in pedidos if p["id"] == pedido_id)["status"] == "aprovado"
 
-    assert api.put(f"/pedidos/{pedido_id}/status", {"status": "invalido"}).status_code == 400
+    assert api.put(f"/pedidos/{pedido_id}/status", {"status": "invalido"},
+                   headers=admin_headers).status_code == 400
 
 
 # ---------- relatório ----------
 
-def test_relatorio_vendas(api):
-    r = api.get("/relatorios/vendas")
+def test_relatorio_vendas(api, admin_headers):
+    r = api.get("/relatorios/vendas", headers=admin_headers)
     assert r.status_code == 200
     dados = r.json()["dados"]
     for chave in ("total_pedidos", "faturamento_bruto", "desconto_aplicavel",
